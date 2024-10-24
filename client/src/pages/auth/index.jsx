@@ -4,15 +4,78 @@ import Victory from "../../assets/victory.svg";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { apiClient } from "@/lib/api-client";
+import { LOGIN_ROUTES, SIGNUP_ROUTES } from "@/utils/constants";
+import { useNavigate } from "react-router-dom";
+import { useAppStore } from "@/store";
 
 const Auth = () => {
+  const navigate = useNavigate();
+  const { setUserInfo } = useAppStore();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleLogin = async () => {};
+  const validateLogin = () => {
+    if (!email.length) {
+      toast.error("Email is required!");
+      return false;
+    }
+    if (!password.length) {
+      toast.error("Password is required!");
+      return false;
+    }
+    return true;
+  };
+  const validateSignup = () => {
+    if (!email.length) {
+      toast.error("Email is required!");
+      return false;
+    }
+    if (!password.length) {
+      toast.error("Password is required!");
+      return false;
+    }
+    if (password !== confirmPassword) {
+      toast.error("Password and confirm password should be the same!");
+      return false;
+    }
+    return true;
+  };
+  const handleLogin = async () => {
+    if (validateLogin()) {
+      const response = await apiClient.post(
+        LOGIN_ROUTES,
+        { email, password },
+        { withCredentials: true }
+      );
+      console.log(response.data);
+      if (response.data.user.id) {
+        setUserInfo(response.data.user);
+        if (response.data.user.profileSetup) {
+          navigate("/chat");
+        } else {
+          navigate("/profile");
+        }
+      }
+    }
+  };
 
-  const handleSignup = async () => {};
+  const handleSignup = async () => {
+    if (validateSignup()) {
+      const response = await apiClient.post(
+        SIGNUP_ROUTES,
+        { email, password },
+        { withCredentials: true }
+      );
+      if (response.status === 201) {
+        setUserInfo(response.data.user);
+        navigate("/profile");
+      }
+    }
+  };
 
   return (
     <div className="h-[100vh] w-[100vw] flex items-center justify-center">
@@ -28,7 +91,7 @@ const Auth = () => {
             </p>
           </div>
           <div className="flex items-center justify-center w-full">
-            <Tabs className="w-3/4">
+            <Tabs className="w-3/4" defaultValue="login">
               <TabsList className="bg-transparent rounded-none w-full">
                 <TabsTrigger
                   value="login"
@@ -81,7 +144,7 @@ const Auth = () => {
                   placeholder="Confirm Password"
                   type="password"
                   className="rounded-full p-6"
-                  value={password}
+                  value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
                 <Button className="rounded-full p-6" onClick={handleSignup}>

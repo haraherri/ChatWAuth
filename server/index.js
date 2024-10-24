@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
+import { errorHandler, CustomError } from "./middlewares/error.js";
 
 dotenv.config();
 
@@ -18,8 +20,9 @@ app.use(
 );
 
 app.use(express.json());
-
 app.use(cookieParser());
+
+app.use("/api/auth", authRoutes);
 
 (async () => {
   try {
@@ -33,3 +36,5 @@ app.use(cookieParser());
     process.exit(1);
   }
 })();
+
+app.use(errorHandler);
