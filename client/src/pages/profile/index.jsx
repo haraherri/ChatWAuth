@@ -14,6 +14,9 @@ import {
   UPDATE_PROFILE_ROUTES,
   UPLOAD_PROFILE_IMAGE_ROUTES,
 } from "@/utils/constants";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import ChangePassword from "./ChangePassword";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -139,112 +142,156 @@ const Profile = () => {
       }
     }
   };
+
   return (
-    <div className="bg-[#1b1c24] h-[100vh] flex items-center justify-center flex-col gap-10">
-      <div className="flex flex-col gap-10 w-[80vw] md:w-max">
-        <div onClick={handleNavigate}>
-          <IoArrowBack className="text-4xl lg:text-6xl text-white/90 cursor-pointer" />
+    <div className="bg-[#1b1c24] min-h-screen flex items-center justify-center py-10">
+      <div className="flex flex-col gap-10 w-[90vw] max-w-4xl">
+        <div onClick={handleNavigate} className="cursor-pointer">
+          <IoArrowBack className="text-4xl lg:text-6xl text-white/90" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div
-            className="h-full w-32 md:w-48 md:h-48 relative flex justify-center items-center"
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-          >
-            <Avatar className="h-32 w-32 md:w-48 md:h-48 rounded-full overflow-hidden">
-              {image ? (
-                <AvatarImage
-                  src={image}
-                  alt="profile"
-                  className="object-cover w-full h-full bg-black"
-                />
-              ) : (
-                <div
-                  className={`h-32 w-32 uppercase md:w-48 md:h-48 text-5xl border-[1px] flex items-center justify-center rounded-full ${getColor(
-                    selectedColor
-                  )}`}
-                >
-                  {firstName
-                    ? firstName.split("").shift()
-                    : userInfo.email.split("").shift()}
-                </div>
-              )}
-            </Avatar>
-            {hovered && (
-              <div
-                className="absolute inset-0 flex justify-center items-center bg-black/50 rounded-full cursor-pointer ring-fuchsia-50"
-                onClick={image ? handleDeleteImage : handleFileInputClick}
+        <Tabs defaultValue="profile" className="w-full">
+          <div className="flex items-center justify-center w-full mb-8">
+            <TabsList className="bg-transparent rounded-none w-3/4">
+              <TabsTrigger
+                value="profile"
+                className="w-full data-[state=active]:bg-transparent 
+                            text-white/70 border-b-[1px] border-gray-700
+                            rounded-none data-[state=active]:text-white 
+                            data-[state=active]:font-semibold 
+                            data-[state=active]:border-b-2
+                            data-[state=active]:border-b-purple-500 
+                            hover:text-white/90
+                            p-4 transition-all duration-300
+                            relative -mb-[1px]"
               >
-                {image ? (
-                  <FaTrash className="text-white text-3xl cursor-pointer" />
-                ) : (
-                  <FaPlus className="text-white text-3xl cursor-pointer" />
-                )}
-              </div>
-            )}
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              onChange={handleImageChange}
-              name="profile-image"
-              accept=".png, .jpg, .jpeg, .svg, .webp"
-            />
+                Profile Information
+              </TabsTrigger>
+              <TabsTrigger
+                value="password"
+                className="w-full data-[state=active]:bg-transparent 
+                            text-white/70 border-b-[1px] border-gray-700
+                            rounded-none data-[state=active]:text-white 
+                            data-[state=active]:font-semibold 
+                            data-[state=active]:border-b-2
+                            data-[state=active]:border-b-purple-500 
+                            hover:text-white/90
+                            p-4 transition-all duration-300
+                            relative -mb-[1px]"
+              >
+                Change Password
+              </TabsTrigger>
+            </TabsList>
           </div>
-          <div className="flex min-w-32 md:min-w-64 flex-col gap-5 text-white items-end justify-center">
-            <div className="w-full">
-              <Input
-                placeholder="Email"
-                type="email"
-                disabled
-                value={userInfo.email}
-                className="rounded-lg p-6 bg-[#2c2e3b] border-none"
-              />
-            </div>
-            <div className="w-full">
-              <Input
-                placeholder="First Name"
-                type="text"
-                onChange={(e) => setFirstName(e.target.value)}
-                value={firstName}
-                className="rounded-lg p-6 bg-[#2c2e3b] border-none"
-              />
-            </div>
-            <div className="w-full">
-              <Input
-                placeholder="Email"
-                type="text"
-                onChange={(e) => setLastName(e.target.value)}
-                value={lastName}
-                className="rounded-lg p-6 bg-[#2c2e3b] border-none"
-              />
-            </div>
-            <div className="w-full flex gap-5">
-              {colors.map((color, index) => (
-                <div
-                  className={`${color} h-8 w-8 rounded-full cursor-pointer transition-all duration-300 
-                  ${
-                    selectedColor === index
-                      ? "outline outline-white/50 outline-1"
-                      : ""
-                  }} 
-                      `}
-                  key={index}
-                  onClick={() => setSelectedColor(index)}
-                ></div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="w-full">
-          <Button
-            className="h-16 w-full bg-purple-700 hover:bg-purple-900 transition-all duration-300"
-            onClick={saveChanges}
-          >
-            Save Changes
-          </Button>
-        </div>
+
+          <TabsContent value="profile">
+            <Card className="border-none bg-transparent shadow-none">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div
+                    className="h-full w-32 md:w-48 md:h-48 relative flex justify-center items-center ml-32"
+                    onMouseEnter={() => setHovered(true)}
+                    onMouseLeave={() => setHovered(false)}
+                  >
+                    <Avatar className="h-32 w-32 md:w-48 md:h-48 rounded-full overflow-hidden">
+                      {image ? (
+                        <AvatarImage
+                          src={image}
+                          alt="profile"
+                          className="object-cover w-full h-full bg-black"
+                        />
+                      ) : (
+                        <div
+                          className={`h-32 w-32 uppercase md:w-48 md:h-48 text-5xl border-[1px] flex items-center justify-center rounded-full ${getColor(
+                            selectedColor
+                          )}`}
+                        >
+                          {firstName
+                            ? firstName.split("").shift()
+                            : userInfo.email.split("").shift()}
+                        </div>
+                      )}
+                    </Avatar>
+                    {hovered && (
+                      <div
+                        className="absolute inset-0 flex justify-center items-center bg-black/50 rounded-full cursor-pointer"
+                        onClick={
+                          image ? handleDeleteImage : handleFileInputClick
+                        }
+                      >
+                        {image ? (
+                          <FaTrash className="text-white text-3xl" />
+                        ) : (
+                          <FaPlus className="text-white text-3xl" />
+                        )}
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleImageChange}
+                      name="profile-image"
+                      accept=".png, .jpg, .jpeg, .svg, .webp"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-5 text-white">
+                    <Input
+                      placeholder="Email"
+                      type="email"
+                      disabled
+                      value={userInfo.email}
+                      className="rounded-lg p-6 bg-[#2c2e3b] border-none"
+                    />
+                    <Input
+                      placeholder="First Name"
+                      type="text"
+                      onChange={(e) => setFirstName(e.target.value)}
+                      value={firstName}
+                      className="rounded-lg p-6 bg-[#2c2e3b] border-none"
+                    />
+                    <Input
+                      placeholder="Last Name"
+                      type="text"
+                      onChange={(e) => setLastName(e.target.value)}
+                      value={lastName}
+                      className="rounded-lg p-6 bg-[#2c2e3b] border-none"
+                    />
+                    <div className="flex gap-5">
+                      {colors.map((color, index) => (
+                        <div
+                          className={`${color} h-8 w-8 rounded-full cursor-pointer transition-all duration-300 
+                            ${
+                              selectedColor === index
+                                ? "outline outline-white/70 outline-2"
+                                : ""
+                            }`}
+                          key={index}
+                          onClick={() => setSelectedColor(index)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  className="h-16 w-full bg-purple-700 hover:bg-purple-900 transition-all duration-300 mt-8"
+                  onClick={saveChanges}
+                >
+                  Save Changes
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="password">
+            <Card className="border-none bg-transparent shadow-none">
+              <CardContent className="p-6">
+                <ChangePassword />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
