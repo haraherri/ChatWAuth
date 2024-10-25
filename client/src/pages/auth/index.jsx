@@ -44,6 +44,7 @@ const Auth = () => {
     }
     return true;
   };
+
   const handleLogin = async () => {
     if (validateLogin()) {
       try {
@@ -65,8 +66,15 @@ const Auth = () => {
         if (error.response?.status === 403) {
           toast.error(error.response.data.error);
           navigate("/check-email");
-          toast.error(error.response?.data?.error || "Login failed");
+          return;
         }
+
+        if (error.response?.data?.error) {
+          toast.error(error.response.data.error);
+          return;
+        }
+
+        toast.error("Login failed. Please try again.");
       }
     }
   };

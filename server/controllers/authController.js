@@ -2,12 +2,22 @@ import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { CustomError } from "../middlewares/error.js";
 import { compare } from "bcrypt";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   generateResetToken,
   generateVerificationToken,
 } from "../utils/token.utils.js";
 import { emailTemplates, transporter } from "../config/email.config.js";
 const maxAge = 3 * 24 * 60 * 60 * 1000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const generateFileUrl = (filename) => {
+  return process.env.URL + `/uploads/profiles/${filename}`;
+};
 
 const generateToken = (email, userId) => {
   return jwt.sign({ email, userId }, process.env.JWT_SECRET_KEY, {
@@ -206,6 +216,129 @@ export const getUserInfo = async (req, res, next) => {
       image: userData.image,
       color: userData.color,
       isEmailVerified: userData.isEmailVerified,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const { userId } = req;
+    const { firstName, lastName, color } = req.body;
+
+    if (!firstName || !lastName) {
+      throw new CustomError("First name, last name is required!");
+    }
+    const userData = await User.findByIdAndUpdate(
+      userId,
+      {
+        firstName,
+        lastName,
+        color,
+        profileSetup: true,
+      },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json({
+      id: userData._id,
+      email: userData.email,
+      profileSetup: userData.profileSetup,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      image: userData.image,
+      color: userData.color,
+      isEmailVerified: userData.isEmailVerified,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadProfileImage = async (req, res, next) => {
+  const { userId } = req;
+  const { filename } = req.file;
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { image: generateFileUrl(filename) },
+      { new: true, runValidators: true }
+    ).select("-password");
+    if (!user) {
+      throw new CustomError("User not found!", 404);
+    }
+    res
+      .status(200)
+      .json({ message: "Profile Image updated successfully!", user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteProfileImage = async (req, res, next) => {
+  const { userId } = req;
+
+  try {
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      throw new CustomError("User not found!", 404);
+    }
+
+    if (!user.image) {
+      throw new CustomError("No profile image found!", 404);
+    }
+
+    const filename = user.image.split("/").pop();
+    const filePath = path.join(__dirname, "../uploads/profiles", filename);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    user.image = "";
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile image deleted successfully!",
+      user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      throw new CustomError(
+        "Current password and new password are required!",
+        400
+      );
+    }
+    if (newPassword.length < 6) {
+      throw new CustomError("New password must be at least 6 characters!", 400);
+    }
+
+    const userData = await User.findById(req.userId);
+    if (!userData) {
+      throw new CustomError("User not found!", 404);
+    }
+
+    const isPasswordValid = await userData.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      throw new CustomError("Current password is incorrect!", 400);
+    }
+
+    userData.password = newPassword;
+    await userData.save();
+
+    return res.status(200).json({
+      message: "Password changed successfully!",
     });
   } catch (error) {
     next(error);

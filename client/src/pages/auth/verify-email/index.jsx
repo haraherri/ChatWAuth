@@ -1,45 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { apiClient } from "@/lib/api-client";
 import Victory from "@/assets/victory.svg";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { VERIFY_EMAIL_ROUTES } from "@/utils/constants";
+
+import { useAppStore } from "@/store";
 
 const VerifyEmail = () => {
   const { token } = useParams();
   const navigate = useNavigate();
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [verificationError, setVerificationError] = useState(null);
+  const { verifyEmail, isVerifyingEmail, emailVerificationError } =
+    useAppStore();
 
   useEffect(() => {
-    const verifyEmail = async () => {
-      try {
-        const response = await apiClient.get(`${VERIFY_EMAIL_ROUTES}/${token}`);
-        if (response.status === 200) {
-          setIsVerifying(false);
-          toast.success("Email verified successfully!");
-          setTimeout(() => {
-            navigate("/auth");
-          }, 3000);
-        }
-      } catch (error) {
-        setIsVerifying(false);
-        const errorMessage =
-          error.response?.data?.error || "Verification failed";
-        setVerificationError(errorMessage);
-        toast.error(errorMessage);
+    const verify = async () => {
+      const success = await verifyEmail(token);
+      if (success) {
+        setTimeout(() => {
+          navigate("/auth");
+        }, 3000);
       }
     };
-    verifyEmail();
-  }, [token, navigate]);
+    verify();
+  }, [token, navigate, verifyEmail]);
 
   return (
     <div className="h-[100vh] w-[100vw] flex items-center justify-center">
       <div className="h-[80vh] bg-white border-2 border-white text-opacity-90 shadow-2xl w-[80vw] md:w-[90vw] lg:w-[70vw] xl:w-[60vw] rounded-3xl flex flex-col items-center justify-center gap-6">
         <img src={Victory} alt="Victory Emoji" className="h-[100px]" />
 
-        {isVerifying ? (
+        {isVerifyingEmail ? (
           <>
             <h1 className="text-4xl font-bold text-center">
               Verifying your email...
@@ -48,13 +37,13 @@ const VerifyEmail = () => {
               Please wait while we verify your email address
             </p>
           </>
-        ) : verificationError ? (
+        ) : emailVerificationError ? (
           <>
             <h1 className="text-4xl font-bold text-center text-red-500">
               Verification Failed
             </h1>
             <p className="font-medium text-center text-gray-600">
-              {verificationError}
+              {emailVerificationError}
             </p>
             <Button
               className="rounded-full p-6 mt-4"

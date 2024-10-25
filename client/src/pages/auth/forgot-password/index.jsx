@@ -2,15 +2,14 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
 import Victory from "@/assets/victory.svg";
 import { useNavigate } from "react-router-dom";
-import { FORGOT_PASSWORD_ROUTES } from "@/utils/constants";
+import { useAppStore } from "@/store";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const navigate = useNavigate();
+  const { sendResetPasswordLink, isSendingResetLink } = useAppStore();
 
   const handleSubmit = async () => {
     if (!email.length) {
@@ -18,18 +17,9 @@ const ForgotPassword = () => {
       return;
     }
 
-    try {
-      setIsSending(true);
-      const response = await apiClient.post(FORGOT_PASSWORD_ROUTES, { email });
-      if (response.status === 200) {
-        toast.success("Reset instructions sent to your email!");
-      }
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.error || "Failed to send reset email";
-      toast.error(errorMessage);
-    } finally {
-      setIsSending(false);
+    const success = await sendResetPasswordLink(email);
+    if (success) {
+      setEmail("");
     }
   };
 
@@ -52,9 +42,10 @@ const ForgotPassword = () => {
           <Button
             className="rounded-full p-6 w-full"
             onClick={handleSubmit}
-            disabled={isSending}
+            disabled={isSendingResetLink} // Sử dụng state từ store
           >
-            {isSending ? "Sending..." : "Send Reset Link"}
+            {isSendingResetLink ? "Sending..." : "Send Reset Link"}{" "}
+            {/* Sử dụng state từ store */}
           </Button>
           <Button
             variant="link"

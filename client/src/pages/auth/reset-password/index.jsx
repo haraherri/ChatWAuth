@@ -3,16 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
 import Victory from "@/assets/victory.svg";
-import { RESET_PASSWORD_ROUTES } from "@/utils/constants";
+import { useAppStore } from "@/store";
 
 const ResetPassword = () => {
   const { token } = useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isResetting, setIsResetting] = useState(false);
+  const { resetPassword, isResettingPassword } = useAppStore();
 
   const handleReset = async () => {
     if (!password.length) {
@@ -24,22 +23,9 @@ const ResetPassword = () => {
       return;
     }
 
-    try {
-      setIsResetting(true);
-      const response = await apiClient.post(
-        `${RESET_PASSWORD_ROUTES}/${token}`,
-        { password }
-      );
-      if (response.status === 200) {
-        toast.success("Password reset successfully!");
-        navigate("/auth");
-      }
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.error || "Failed to reset password";
-      toast.error(errorMessage);
-    } finally {
-      setIsResetting(false);
+    const success = await resetPassword(token, password);
+    if (success) {
+      navigate("/auth");
     }
   };
 
@@ -69,9 +55,9 @@ const ResetPassword = () => {
           <Button
             className="rounded-full p-6 w-full"
             onClick={handleReset}
-            disabled={isResetting}
+            disabled={isResettingPassword}
           >
-            {isResetting ? "Resetting..." : "Reset Password"}
+            {isResettingPassword ? "Resetting..." : "Reset Password"}
           </Button>
         </div>
       </div>
