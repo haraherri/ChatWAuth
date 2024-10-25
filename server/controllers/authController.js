@@ -2,6 +2,11 @@ import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { CustomError } from "../middlewares/error.js";
 import { compare } from "bcrypt";
+import {
+  generateResetToken,
+  generateVerificationToken,
+} from "../utils/token.utils.js";
+import { emailTemplates, transporter } from "../config/email.config.js";
 const maxAge = 3 * 24 * 60 * 60 * 1000;
 
 const generateToken = (email, userId) => {
@@ -17,7 +22,19 @@ export const signup = async (req, res, next) => {
       throw new CustomError("Email and Password are required!", 400);
     }
 
-    const user = await User.create({ email, password });
+    const verificationToken = generateVerificationToken();
+    const user = await User.create({
+      email,
+      password,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000,
+    });
+
+    await transporter.sendMail({
+      to: email,
+      ...emailTemplates.verifyEmail(verificationToken),
+    });
+
     res.cookie("jwt", generateToken(email, user._id), {
       maxAge,
       sameSite: "None",
@@ -30,16 +47,89 @@ export const signup = async (req, res, next) => {
         email: user.email,
         profileSetup: user.profileSetup,
       },
+      message: "Please check your email to verify your account",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      throw new CustomError("Invalid or expired verification token", 400);
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ message: "Email verified successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      throw new CustomError("User not found", 404);
+    }
+
+    const resetToken = generateResetToken();
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save();
+
+    await transporter.sendMail({
+      to: email,
+      ...emailTemplates.resetPassword(resetToken),
+    });
+
+    return res.status(200).json({
+      message: "Password reset instructions sent to your email",
     });
   } catch (error) {
     next(error);
   }
 };
 
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      throw new CustomError("Invalid or expired reset token", 400);
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       throw new CustomError("Email and Password are required!", 400);
     }
@@ -53,8 +143,31 @@ export const login = async (req, res, next) => {
     if (!isValidPassword) {
       throw new CustomError("Invalid credentials", 401);
     }
+
+    if (!user.isEmailVerified) {
+      throw new CustomError("Please verify your email before logging in", 403);
+
+      /*
+      const verificationToken = generateVerificationToken();
+      user.emailVerificationToken = verificationToken;
+      user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+      await user.save();
+      
+      await transporter.sendMail({
+        to: email,
+        ...emailTemplates.verifyEmail(verificationToken),
+      });
+      
+      throw new CustomError(
+        "Please verify your email. A new verification email has been sent.",
+        403
+      );
+      */
+    }
+
     user.lastLogin = new Date();
     await user.save();
+
     res.cookie("jwt", generateToken(email, user._id), {
       maxAge,
       sameSite: "None",
@@ -70,7 +183,29 @@ export const login = async (req, res, next) => {
         lastName: user.lastName,
         image: user.image,
         color: user.color,
+        isEmailVerified: user.isEmailVerified,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserInfo = async (req, res, next) => {
+  try {
+    const userData = await User.findById(req.userId);
+    if (!userData) {
+      throw new CustomError("User with the given id is not found!", 404);
+    }
+    return res.status(200).json({
+      id: userData._id,
+      email: userData.email,
+      profileSetup: userData.profileSetup,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      image: userData.image,
+      color: userData.color,
+      isEmailVerified: userData.isEmailVerified,
     });
   } catch (error) {
     next(error);

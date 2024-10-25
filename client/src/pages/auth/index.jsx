@@ -46,18 +46,26 @@ const Auth = () => {
   };
   const handleLogin = async () => {
     if (validateLogin()) {
-      const response = await apiClient.post(
-        LOGIN_ROUTES,
-        { email, password },
-        { withCredentials: true }
-      );
-      console.log(response.data);
-      if (response.data.user.id) {
-        setUserInfo(response.data.user);
-        if (response.data.user.profileSetup) {
-          navigate("/chat");
-        } else {
-          navigate("/profile");
+      try {
+        const response = await apiClient.post(
+          LOGIN_ROUTES,
+          { email, password },
+          { withCredentials: true }
+        );
+
+        if (response.data.user.id) {
+          setUserInfo(response.data.user);
+          if (response.data.user.profileSetup) {
+            navigate("/chat");
+          } else {
+            navigate("/profile");
+          }
+        }
+      } catch (error) {
+        if (error.response?.status === 403) {
+          toast.error(error.response.data.error);
+          navigate("/check-email");
+          toast.error(error.response?.data?.error || "Login failed");
         }
       }
     }
@@ -65,18 +73,22 @@ const Auth = () => {
 
   const handleSignup = async () => {
     if (validateSignup()) {
-      const response = await apiClient.post(
-        SIGNUP_ROUTES,
-        { email, password },
-        { withCredentials: true }
-      );
-      if (response.status === 201) {
-        setUserInfo(response.data.user);
-        navigate("/profile");
+      try {
+        const response = await apiClient.post(
+          SIGNUP_ROUTES,
+          { email, password },
+          { withCredentials: true }
+        );
+        if (response.status === 201) {
+          toast.success("Please check your email to verify your account!");
+          navigate("/check-email");
+        }
+      } catch (error) {
+        const errorMessage = error.response?.data?.error || "Signup failed";
+        toast.error(errorMessage);
       }
     }
   };
-
   return (
     <div className="h-[100vh] w-[100vw] flex items-center justify-center">
       <div className="h-[80vh] bg-white border-2 border-white text-opacity-90 shadow-2xl w-[80vw] md:w-[90vw] lg:w-[70vw] xl:w-[60vw] rounded-3xl grid xl:grid-cols-2">
@@ -123,6 +135,15 @@ const Auth = () => {
                 />
                 <Button className="rounded-full p-6" onClick={handleLogin}>
                   Login
+                </Button>
+
+                {/* Thêm link Forgot Password */}
+                <Button
+                  variant="link"
+                  className="mt-2"
+                  onClick={() => navigate("/forgot-password")}
+                >
+                  Forgot Password?
                 </Button>
               </TabsContent>
               <TabsContent className="flex flex-col gap-5" value="signup">
