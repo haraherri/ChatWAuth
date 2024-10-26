@@ -180,8 +180,9 @@ export const login = async (req, res, next) => {
 
     res.cookie("jwt", generateToken(email, user._id), {
       maxAge,
-      sameSite: "None",
+      sameSite: "none",
       secure: true,
+      httpOnly: true,
     });
 
     return res.status(200).json({
@@ -339,6 +340,23 @@ export const changePassword = async (req, res, next) => {
 
     return res.status(200).json({
       message: "Password changed successfully!",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const logOut = async (req, res, next) => {
+  try {
+    const cookieOptions = {
+      sameSite: "none",
+      secure: true,
+      httpOnly: true,
+    };
+    res.clearCookie("jwt", cookieOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: "User logged out successfully",
     });
   } catch (error) {
     next(error);

@@ -10,6 +10,7 @@ import {
   uploadProfileImage,
   deleteProfileImage,
   changePassword,
+  logOut,
 } from "../controllers/authController.js";
 import verifyToken from "../middlewares/verifyToken.js";
 import { uploadProfile } from "../middlewares/upload.js";
@@ -32,4 +33,6 @@ router.post(
 router.delete("/delete-profile-image", verifyToken, deleteProfileImage);
 
 router.put("/change-password", verifyToken, changePassword);
+
+router.post("/logout", verifyToken, logOut);
 export default router;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Background from "../../assets/login2.png";
+import Background from "../../assets/login1.png";
 import Victory from "../../assets/victory.svg";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -103,11 +103,11 @@ const Auth = () => {
         <div className="flex flex-col gap-10 items-center justify-center">
           <div className="flex items-center justify-center flex-col">
             <div className="flex items-center justify-center">
-              <h1 className="text-5xl font-bold md:text-6xl">Welcome</h1>
+              <h1 className="text-5xl font-bold md:text-6xl">Hello there!</h1>
               <img src={Victory} alt="Victory Emoji" className="h-[100px]" />
             </div>
             <p className="font-medium text-center">
-              Fill in the details to get started with the best chat app!
+              Join the talk—make every chat meaningful! 💬
             </p>
           </div>
           <div className="flex items-center justify-center w-full">
@@ -145,7 +145,6 @@ const Auth = () => {
                   Login
                 </Button>
 
-                {/* Thêm link Forgot Password */}
                 <Button
                   variant="link"
                   className="mt-2"
@@ -154,7 +153,7 @@ const Auth = () => {
                   Forgot Password?
                 </Button>
               </TabsContent>
-              <TabsContent className="flex flex-col gap-5" value="signup">
+              <TabsContent className="flex flex-col gap-5 " value="signup">
                 <Input
                   placeholder="Email"
                   type="email"

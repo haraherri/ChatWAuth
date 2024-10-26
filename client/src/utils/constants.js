@@ -12,3 +12,4 @@ export const UPDATE_PROFILE_ROUTES = `${AUTH_ROUTES}/update-profile`;
 export const UPLOAD_PROFILE_IMAGE_ROUTES = `${AUTH_ROUTES}/upload-profile-image`;
 export const REMOVE_PROFILE_IMAGE_ROUTES = `${AUTH_ROUTES}/delete-profile-image`;
 export const CHANGE_PASSWORD_ROUTES = `${AUTH_ROUTES}/change-password`;
+export const LOGOUT_ROUTES = `${AUTH_ROUTES}/logout`;
