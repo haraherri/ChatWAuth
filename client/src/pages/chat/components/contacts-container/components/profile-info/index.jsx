@@ -11,7 +11,7 @@ import { useAppStore } from "@/store";
 import { LOGOUT_ROUTES } from "@/utils/constants";
 import React from "react";
 import { FiEdit2 } from "react-icons/fi";
-import { IoLogOut, IoPowerSharp } from "react-icons/io5";
+import { IoPowerSharp } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 

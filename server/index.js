@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 import { errorHandler, CustomError } from "./middlewares/error.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -30,6 +31,7 @@ app.use(
 );
 
 app.use("/api/auth", authRoutes);
+app.use("/api/contacts", contactRoutes);
 
 (async () => {
   try {

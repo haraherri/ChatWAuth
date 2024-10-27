@@ -13,3 +13,6 @@ export const UPLOAD_PROFILE_IMAGE_ROUTES = `${AUTH_ROUTES}/upload-profile-image`
 export const REMOVE_PROFILE_IMAGE_ROUTES = `${AUTH_ROUTES}/delete-profile-image`;
 export const CHANGE_PASSWORD_ROUTES = `${AUTH_ROUTES}/change-password`;
 export const LOGOUT_ROUTES = `${AUTH_ROUTES}/logout`;
+
+export const CONTACTS_ROUTES = "/api/contacts";
+export const SEARCH_CONTACTS_ROUTES = `${CONTACTS_ROUTES}/search`;
