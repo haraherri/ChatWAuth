@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import User from "../models/user.model.js";
 
 dotenv.config();
 
@@ -19,7 +20,7 @@ const connectDB = async () => {
     console.log(
       `Database connection status: ${dbState[mongoose.connection.readyState]}`
     );
-
+    await createDefaultAdmin();
     mongoose.connection.on("error", (err) => {
       console.error("MongoDB connection error:", err);
     });
@@ -41,6 +42,23 @@ const connectDB = async () => {
   } catch (error) {
     console.error("Database connection error:", error);
     process.exit(1);
+  }
+};
+const createDefaultAdmin = async () => {
+  try {
+    const adminExists = await User.findOne({ role: "admin" });
+    if (!adminExists) {
+      await User.create({
+        email: process.env.ADMIN_EMAIL || "admin@example.com",
+        password: process.env.ADMIN_PASSWORD || "admin123",
+        role: "admin",
+        isEmailVerified: true,
+        profileSetup: true,
+      });
+      console.log("Default admin account created");
+    }
+  } catch (error) {
+    console.error("Error creating admin account:", error);
   }
 };
 

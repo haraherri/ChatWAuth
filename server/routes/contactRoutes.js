@@ -1,6 +1,7 @@
 import { Router } from "express";
-import verifyToken from "../middlewares/verifyToken.js";
+
 import { searchContacts } from "../controllers/contactsController.js";
+import { verifyToken } from "../middlewares/verifyToken.js";
 
 const router = Router();
 

@@ -5,9 +5,11 @@ import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import { errorHandler, CustomError } from "./middlewares/error.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { checkRole, verifyToken } from "./middlewares/verifyToken.js";
 dotenv.config();
 
 const app = express();
@@ -32,6 +34,7 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/admin", adminRoutes);
 
 (async () => {
   try {

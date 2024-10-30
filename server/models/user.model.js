@@ -33,6 +33,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    role: {
+      type: String,
+      enum: ["admin", "moderator", "user"],
+      default: "user",
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,

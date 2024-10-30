@@ -12,8 +12,8 @@ import {
   changePassword,
   logOut,
 } from "../controllers/authController.js";
-import verifyToken from "../middlewares/verifyToken.js";
 import { uploadProfile } from "../middlewares/upload.js";
+import { verifyToken } from "../middlewares/verifyToken.js";
 
 const router = Router();
 
