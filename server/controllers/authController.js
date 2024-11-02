@@ -19,55 +19,11 @@ const generateFileUrl = (filename) => {
   return process.env.URL + `/uploads/profiles/${filename}`;
 };
 
-// const generateToken = (email, userId) => {
-//   return jwt.sign({ email, userId }, process.env.JWT_SECRET_KEY, {
-//     expiresIn: maxAge,
-//   });
-// };
 const generateToken = (email, userId, role) => {
   return jwt.sign({ email, userId, role }, process.env.JWT_SECRET_KEY, {
     expiresIn: maxAge,
   });
 };
-
-// export const signup = async (req, res, next) => {
-//   try {
-//     const { email, password } = req.body;
-//     if (!email || !password) {
-//       throw new CustomError("Email and Password are required!", 400);
-//     }
-
-//     const verificationToken = generateVerificationToken();
-//     const user = await User.create({
-//       email,
-//       password,
-//       emailVerificationToken: verificationToken,
-//       emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000,
-//     });
-
-//     await transporter.sendMail({
-//       to: email,
-//       ...emailTemplates.verifyEmail(verificationToken),
-//     });
-
-//     res.cookie("jwt", generateToken(email, user._id), {
-//       maxAge,
-//       sameSite: "None",
-//       secure: true,
-//     });
-
-//     return res.status(201).json({
-//       user: {
-//         id: user._id,
-//         email: user.email,
-//         profileSetup: user.profileSetup,
-//       },
-//       message: "Please check your email to verify your account",
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 export const signup = async (req, res, next) => {
   try {
@@ -230,7 +186,7 @@ export const login = async (req, res, next) => {
     user.lastLogin = new Date();
     await user.save();
 
-    res.cookie("jwt", generateToken(email, user._id), {
+    res.cookie("jwt", generateToken(email, user._id, user.role), {
       maxAge,
       sameSite: "none",
       secure: true,
@@ -247,6 +203,7 @@ export const login = async (req, res, next) => {
         image: user.image,
         color: user.color,
         isEmailVerified: user.isEmailVerified,
+        role: user.role,
       },
     });
   } catch (error) {
