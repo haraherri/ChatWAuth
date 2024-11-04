@@ -42,10 +42,9 @@ const ForgotPassword = () => {
           <Button
             className="rounded-full p-6 w-full"
             onClick={handleSubmit}
-            disabled={isSendingResetLink} // Sử dụng state từ store
+            disabled={isSendingResetLink}
           >
             {isSendingResetLink ? "Sending..." : "Send Reset Link"}{" "}
-            {/* Sử dụng state từ store */}
           </Button>
           <Button
             variant="link"

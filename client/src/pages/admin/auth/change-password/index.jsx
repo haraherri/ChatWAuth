@@ -1,4 +1,3 @@
-// src/pages/admin/auth/change-password/index.jsx
 import { useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
@@ -11,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LockKeyhole } from "lucide-react"; // Icon từ lucide-react
+import { LockKeyhole } from "lucide-react";
 import { ADMIN_CHANGE_PASSWORD_ROUTES } from "@/utils/admin-constants";
 
 const AdminChangePassword = () => {

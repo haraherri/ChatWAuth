@@ -121,8 +121,8 @@ const UserForm = () => {
               onChange={handleInputChange}
               placeholder="Enter email"
               required
-              disabled={isEditMode} // Disable email khi edit
-              className={isEditMode ? "bg-gray-100" : ""} // Style để show rõ là disabled
+              disabled={isEditMode}
+              className={isEditMode ? "bg-gray-100" : ""}
             />
             {isEditMode && (
               <p className="text-sm text-muted-foreground mt-1">

@@ -17,7 +17,12 @@ export const LOGOUT_ROUTES = `${AUTH_ROUTES}/logout`;
 export const CONTACTS_ROUTES = "/api/contacts";
 export const SEARCH_CONTACTS_ROUTES = `${CONTACTS_ROUTES}/search`;
 export const GET_DM_CONTACTS_ROUTES = `${CONTACTS_ROUTES}/get-contacts-for-dm`;
+export const GET_ALL_CONTACTS_ROUTES = `${CONTACTS_ROUTES}/get-all-contacts`;
 
 export const MESSAGES_ROUTES = "/api/messages";
 export const GET_ALL_MESSAGES_ROUTES = `${MESSAGES_ROUTES}/get-messages`;
 export const UPLOAD_FILE_ROUTES = `${MESSAGES_ROUTES}/upload-file`;
+
+export const CHANNEL_ROUTES = "/api/rooms";
+export const CREATE_CHANNEL_ROUTES = `${CHANNEL_ROUTES}/create`;
+export const GET_USER_CHANNEL_ROUTES = `${CHANNEL_ROUTES}/me`;

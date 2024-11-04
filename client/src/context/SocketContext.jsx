@@ -2,6 +2,7 @@ import { useAppStore } from "@/store";
 import { HOST } from "@/utils/constants";
 import { createContext, useContext, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
+import { toast } from "sonner";
 
 const SocketContext = createContext(null);
 
@@ -21,25 +22,86 @@ export const SocketProvider = ({ children }) => {
           userId: userInfo.id,
         },
       });
+
+      const handleNewMessage = (message) => {
+        const { selectedChatData, selectedChatType, addMessage } =
+          useAppStore.getState();
+
+        if (message.sender._id !== userInfo.id) {
+          if (selectedChatType === "contact") {
+            if (
+              selectedChatData._id === message.sender._id ||
+              selectedChatData._id === message.recipient._id
+            ) {
+              addMessage(message);
+            }
+          } else if (selectedChatType === "channel") {
+            if (selectedChatData._id === message.room) {
+              addMessage(message);
+            }
+          }
+        }
+      };
+
+      const handleMessageSent = (response) => {
+        if (response.status === "success") {
+          const { selectedChatData, selectedChatType, addMessage } =
+            useAppStore.getState();
+
+          if (response.message.sender._id === userInfo.id) {
+            if (selectedChatType === "contact") {
+              if (selectedChatData._id === response.message.recipient._id) {
+                addMessage(response.message);
+              }
+            } else if (selectedChatType === "channel") {
+              if (selectedChatData._id === response.message.room) {
+                addMessage(response.message);
+              }
+            }
+          }
+        } else {
+          toast.error("Failed to send message");
+        }
+      };
+
+      const handleNewRoom = (room) => {
+        const { addChannel } = useAppStore.getState();
+        addChannel(room);
+      };
+
+      const handleJoinedRoom = (roomId) => {
+        console.log(`Joined room: ${roomId}`);
+      };
+
+      const handleLeftRoom = (roomId) => {
+        console.log(`Left room: ${roomId}`);
+      };
+
+      const handleRoomError = (error) => {
+        toast.error(error);
+      };
+
       socket.current.on("connect", () => {
         console.log("Connected to socket server");
       });
 
-      const handleReceiveMessage = (message) => {
-        const { selectedChatData, selectedChatType, addMessage } =
-          useAppStore.getState();
+      // Existing message handlers
+      socket.current.on("newMessage", handleNewMessage);
+      socket.current.on("messageSent", handleMessageSent);
 
-        if (
-          selectedChatType !== undefined &&
-          (selectedChatData._id === message.sender._id ||
-            selectedChatData._id === message.recipient._id)
-        ) {
-          console.log("Received Message", message);
-          addMessage(message);
-        }
-      };
-      socket.current.on("receiveMessage", handleReceiveMessage);
+      // New room handlers
+      socket.current.on("newRoom", handleNewRoom);
+      socket.current.on("joinedRoom", handleJoinedRoom);
+      socket.current.on("leftRoom", handleLeftRoom);
+      socket.current.on("roomError", handleRoomError);
+
       return () => {
+        socket.current.off("newMessage");
+        socket.current.off("messageSent");
+        socket.current.off("newRoom");
+        socket.current.off("joinedRoom");
+        socket.current.off("leftRoom");
+        socket.current.off("roomError");
         socket.current.disconnect();
       };
     }

@@ -20,16 +20,21 @@ const MessageBar = () => {
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
+    const messageData = {
+      sender: userInfo.id,
+      content: message,
+      messageType: "text",
+      fileUrl: undefined,
+    };
+
     if (selectedChatType === "contact") {
-      socket.emit("sendMessage", {
-        sender: userInfo.id,
-        content: message,
-        recipient: selectedChatData._id,
-        messageType: "text",
-        fileUrl: undefined,
-      });
-      setMessage("");
+      messageData.recipient = selectedChatData._id;
+    } else if (selectedChatType === "channel") {
+      messageData.room = selectedChatData._id;
     }
+
+    socket.emit("sendMessage", messageData);
+    setMessage("");
   };
 
   const handleKeyDown = (e) => {
@@ -42,42 +47,58 @@ const MessageBar = () => {
   const handleAddEmoji = (emoji) => {
     setMessage((msg) => msg + emoji.emoji);
   };
+
   const handleAttachmentClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
   const handleAttachmentChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
     try {
-      const file = e.target.files[0];
-      if (file) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("recipient", selectedChatData._id);
+      const formData = new FormData();
+      formData.append("file", file);
 
-        const response = await apiClient.post(UPLOAD_FILE_ROUTES, formData, {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "multipart/form-data",
+      const chatId = selectedChatData?._id;
+      if (!chatId) return;
+
+      formData.append(
+        selectedChatType === "contact" ? "recipient" : "room",
+        chatId
+      );
+
+      const { data } = await apiClient.post(UPLOAD_FILE_ROUTES, formData, {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (data?.fileData) {
+        const messageData = {
+          sender: userInfo.id,
+          messageType: "file",
+          fileUrl: data.fileData.fileUrl,
+          file: {
+            originalName: data.fileData.originalName,
+            size: data.fileData.size,
+            type: data.fileData.type,
           },
-        });
+          [selectedChatType === "contact" ? "recipient" : "room"]: chatId,
+        };
 
-        if (response.status === 201 && response.data.fileData) {
-          socket.emit("sendMessage", {
-            sender: userInfo.id,
-            recipient: selectedChatData._id,
-            messageType: "file",
-            fileUrl: response.data.fileData.fileUrl,
-            file: {
-              originalName: response.data.fileData.originalName,
-              size: response.data.fileData.size,
-              type: response.data.fileData.type,
-            },
-          });
+        socket.emit("sendMessage", messageData);
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
         }
       }
     } catch (error) {
-      if (error.response?.data?.error) {
-        toast.error(error.response.data.error);
+      console.error("File upload error:", error);
+      toast.error(
+        error.response?.data?.error || "Error uploading file. Please try again."
+      );
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
     }
   };

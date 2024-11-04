@@ -114,3 +114,54 @@ export const getContactforDMList = async (req, res, next) => {
     next(error);
   }
 };
+export const getAllContacts = async (req, res, next) => {
+  try {
+    const contacts = await User.aggregate([
+      {
+        $match: {
+          $and: [
+            { _id: { $ne: new mongoose.Types.ObjectId(req.userId) } },
+            { deletedAt: null },
+            { isEmailVerified: true },
+          ],
+        },
+      },
+
+      {
+        $sort: {
+          firstName: 1,
+          email: 1,
+        },
+      },
+
+      {
+        $project: {
+          value: "$_id",
+          label: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ["$firstName", null] },
+                  { $ne: ["$lastName", null] },
+                ],
+              },
+              then: { $concat: ["$firstName", " ", "$lastName"] },
+              else: "$email",
+            },
+          },
+          email: 1,
+          image: 1,
+          lastLogin: 1,
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      status: "success",
+      contacts,
+      total: contacts.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

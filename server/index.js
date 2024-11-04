@@ -11,7 +11,9 @@ import path from "path";
 import http from "http";
 import { fileURLToPath } from "url";
 import messageRoutes from "./routes/messageRoutes.js";
+import roomRoutes from "./routes/roomRoutes.js";
 import setupSocket from "./socket/socket.js";
+
 dotenv.config();
 
 const app = express();
@@ -43,6 +45,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/rooms", roomRoutes);
 
 (async () => {
   try {

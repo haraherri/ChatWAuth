@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const MessageSchema = new mongoose.Schema(
   {
     sender: {
@@ -10,6 +11,13 @@ const MessageSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: false,
+    },
+    room: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Room",
+      required: function () {
+        return !this.recipient;
+      },
     },
     messageType: {
       type: String,

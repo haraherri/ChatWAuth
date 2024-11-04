@@ -3,6 +3,7 @@ import { CustomError } from "../middlewares/error.js";
 import fs from "fs";
 import path from "path";
 import User from "../models/user.model.js";
+import Room from "../models/room.model.js";
 
 export const getMessagesBetweenUsers = async (req, res, next) => {
   try {
@@ -31,12 +32,26 @@ const generateFileUrl = (filename) => {
 
 export const uploadMessageFile = async (req, res, next) => {
   const { userId } = req;
-  const { recipient } = req.body;
+  const { recipient, room } = req.body;
 
   try {
-    const recipientUser = await User.findById(recipient);
-    if (!recipientUser) {
-      throw new CustomError("Recipient not found!", 404);
+    if (!recipient && !room) {
+      throw new CustomError("Recipient or room is required!", 400);
+    }
+    if (recipient) {
+      const recipientUser = await User.findById(recipient);
+      if (!recipientUser) {
+        throw new CustomError("Recipient not found!", 404);
+      }
+    }
+    if (room) {
+      const chatRoom = await Room.findById(room);
+      if (!chatRoom) {
+        throw new CustomError("Room not found!", 404);
+      }
+      if (!chatRoom.members.includes(userId)) {
+        throw new CustomError("You are not a member of this room!", 403);
+      }
     }
 
     if (!req.file) {
