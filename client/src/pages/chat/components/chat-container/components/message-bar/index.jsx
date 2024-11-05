@@ -1,3 +1,4 @@
+import { Textarea } from "@/components/ui/textarea";
 import { useSocket } from "@/context/SocketContext";
 import { apiClient } from "@/lib/api-client";
 import { useAppStore } from "@/store";
@@ -121,52 +122,63 @@ const MessageBar = () => {
   }, [emojiRef]);
 
   return (
-    <div className="h-[10vh] bg-[#1c1d25] flex justify-center items-center px-8 mb-6 gap-6">
-      <div className="flex-1 flex bg-[#2a2b33] rounded-md items-center gap-5 pr-5">
-        <input
-          type="text"
-          className="flex-1 p-5 bg-transparent rounded-md focus:border-none focus:outline-none"
-          placeholder="Enter Message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-        <button
-          className="text-neutral-500 focus:border-none focus:outline-none focus:text-white duration-300 transition-all"
-          onClick={handleAttachmentClick}
-        >
-          <GrAttachment className="text-2xl" />
-        </button>
-        <input
-          type="file"
-          className="hidden"
-          onChange={handleAttachmentChange}
-          ref={fileInputRef}
-        />
-        <div className="relative">
+    <div className="h-[12vh] bg-[#1c1d25] flex justify-center items-center px-8 mb-6 gap-6">
+      <div className="flex-1 flex items-center bg-[#2a2b33] rounded-xl overflow-hidden pr-2 h-[56px]">
+        <div className="flex-1 relative flex items-center h-full">
+          <Textarea
+            placeholder="Enter Message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
+            style={{
+              height: "100%",
+              maxHeight: "100%",
+            }}
+          />
+        </div>
+
+        <div className="flex items-center gap-2 px-1">
           <button
-            className="text-neutral-500 focus:border-none focus:outline-none focus:text-white duration-300 transition-all"
-            onClick={() => setEmojiPickerOpen(true)}
+            className="text-neutral-500 hover:text-white focus:outline-none duration-300 transition-all p-2 rounded-full hover:bg-[#3a3b43]"
+            onClick={handleAttachmentClick}
           >
-            <RiEmojiStickerLine className="text-2xl" />
+            <GrAttachment className="text-xl" />
           </button>
-          <div className="absolute bottom-16 right-0" ref={emojiRef}>
-            <EmojiPicker
-              theme="dark"
-              open={emojiPickerOpen}
-              onEmojiClick={handleAddEmoji}
-              autoFocusSearch={false}
-            />
+          <input
+            type="file"
+            className="hidden"
+            onChange={handleAttachmentChange}
+            ref={fileInputRef}
+          />
+
+          <div className="relative">
+            <button
+              className="text-neutral-500 hover:text-white focus:outline-none duration-300 transition-all p-2 rounded-full hover:bg-[#3a3b43]"
+              onClick={() => setEmojiPickerOpen(true)}
+            >
+              <RiEmojiStickerLine className="text-xl" />
+            </button>
+            <div className="absolute bottom-16 right-0" ref={emojiRef}>
+              <EmojiPicker
+                theme="dark"
+                open={emojiPickerOpen}
+                onEmojiClick={handleAddEmoji}
+                autoFocusSearch={false}
+              />
+            </div>
           </div>
         </div>
       </div>
+
       <button
-        className="bg-[#8417ff] rounded-md flex items-center focus:bg-[#741bda] justify-center p-4 hover:bg-[#741bda] focusfocus:border-none focus:outline-none focus:text-white duration-300 transition-all"
+        className="bg-[#8417ff] rounded-xl flex items-center justify-center p-4 h-[56px] w-[56px] hover:bg-[#741bda] focus:outline-none duration-300 transition-all"
         onClick={handleSendMessage}
       >
-        <IoSend className="text-2xl" />
+        <IoSend className="text-xl" />
       </button>
     </div>
   );
 };
+
 export default MessageBar;

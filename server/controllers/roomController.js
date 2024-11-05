@@ -109,3 +109,136 @@ export const getRoomMessages = async (req, res, next) => {
     next(error);
   }
 };
+export const addUsersToRoom = async (req, res, next) => {
+  const { roomId } = req.params;
+  const { userIds } = req.body;
+
+  try {
+    const room = await Room.findOne({
+      _id: roomId,
+      deletedAt: null,
+    });
+
+    if (!room) {
+      throw new CustomError("Room not found", 404);
+    }
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      throw new CustomError("User IDs are required", 400);
+    }
+    const existingMembers = new Set(room.members.map((m) => m.toString()));
+    const newUserIds = userIds.filter(
+      (id) => !existingMembers.has(id.toString())
+    );
+
+    if (newUserIds.length === 0) {
+      throw new CustomError("All users are already members", 400);
+    }
+
+    const users = await User.find({
+      _id: { $in: userIds },
+      deletedAt: null,
+    });
+
+    if (users.length !== userIds.length) {
+      throw new CustomError("Some users do not exist", 400);
+    }
+
+    const updatedRoom = await Room.findByIdAndUpdate(
+      roomId,
+      {
+        $addToSet: { members: { $each: userIds } },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).populate("members", "id email firstName lastName image color");
+
+    const io = req.app.get("io");
+    if (io) {
+      users.forEach((user) => {
+        const socketId = userSocketMap.get(user._id.toString());
+        if (socketId) {
+          io.sockets.sockets.get(socketId)?.join(roomId);
+        }
+      });
+      if (io) {
+        io.to(roomId).emit("userJoinedRoom", {
+          room: updatedRoom,
+        });
+        users.forEach((user) => {
+          const socketId = userSocketMap.get(user._id.toString());
+          if (socketId) {
+            io.to(socketId).emit("newRoom", updatedRoom); // Emit event newRoom
+          }
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Users added to room successfully",
+      room: updatedRoom,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeUserFromRoom = async (req, res, next) => {
+  const { roomId, userId } = req.params;
+
+  try {
+    const room = await Room.findOne({
+      _id: roomId,
+      deletedAt: null,
+    });
+
+    if (!room) {
+      throw new CustomError("Room not found", 404);
+    }
+
+    if (!room.members.includes(userId)) {
+      throw new CustomError("User is not a member of this room", 400);
+    }
+    if (room.creator.toString() === userId) {
+      throw new CustomError("Cannot remove room creator", 400);
+    }
+
+    const updatedRoom = await Room.findByIdAndUpdate(
+      roomId,
+      {
+        $pull: { members: userId },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).populate("members", "id email firstName lastName image color");
+
+    const io = req.app.get("io");
+    if (io) {
+      const socketId = userSocketMap.get(userId);
+      if (socketId) {
+        io.to(socketId).emit("userLeftRoom", {
+          roomId,
+          userId,
+          room: updatedRoom,
+        });
+        io.sockets.sockets.get(socketId)?.leave(roomId);
+      }
+      io.to(roomId).emit("userLeftRoom", {
+        room: updatedRoom,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User removed from room successfully",
+      room: updatedRoom,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

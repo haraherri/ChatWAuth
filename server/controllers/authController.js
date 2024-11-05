@@ -31,11 +31,27 @@ export const signup = async (req, res, next) => {
     if (!email || !password) {
       throw new CustomError("Email and Password are required!", 400);
     }
-    const isFirstUser = (await User.countDocuments({})) === 0;
+
+    const existingUser = await User.findOne({
+      email: email.toLowerCase(),
+      deletedAt: null,
+    });
+
+    if (existingUser) {
+      if (!existingUser.isEmailVerified) {
+        throw new CustomError(
+          "Email already registered but not verified. Please login to receive a new verification email.",
+          400
+        );
+      }
+      throw new CustomError("User already exists!", 400);
+    }
+
+    const isFirstUser = (await User.countDocuments({ deletedAt: null })) === 0;
 
     const verificationToken = generateVerificationToken();
     const user = await User.create({
-      email,
+      email: email.toLowerCase(),
       password,
       role: isFirstUser ? "admin" : "user",
       emailVerificationToken: verificationToken,
@@ -47,10 +63,11 @@ export const signup = async (req, res, next) => {
       ...emailTemplates.verifyEmail(verificationToken),
     });
 
-    res.cookie("jwt", generateToken(email, user._id), {
+    res.cookie("jwt", generateToken(email, user._id, user.role), {
       maxAge,
       sameSite: "None",
       secure: true,
+      httpOnly: true,
     });
 
     return res.status(201).json({
@@ -59,6 +76,7 @@ export const signup = async (req, res, next) => {
         email: user.email,
         profileSetup: user.profileSetup,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
       },
       message: "Please check your email to verify your account",
     });
@@ -163,24 +181,26 @@ export const login = async (req, res, next) => {
     }
 
     if (!user.isEmailVerified) {
-      throw new CustomError("Please verify your email before logging in", 403);
+      if (
+        !user.emailVerificationToken ||
+        user.emailVerificationExpires < Date.now()
+      ) {
+        const verificationToken = generateVerificationToken();
+        user.emailVerificationToken = verificationToken;
+        user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+        await user.save();
 
-      /*
-      const verificationToken = generateVerificationToken();
-      user.emailVerificationToken = verificationToken;
-      user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
-      await user.save();
-      
-      await transporter.sendMail({
-        to: email,
-        ...emailTemplates.verifyEmail(verificationToken),
-      });
-      
-      throw new CustomError(
-        "Please verify your email. A new verification email has been sent.",
-        403
-      );
-      */
+        await transporter.sendMail({
+          to: email,
+          ...emailTemplates.verifyEmail(verificationToken),
+        });
+
+        throw new CustomError(
+          "Please verify your email. A new verification email has been sent.",
+          403
+        );
+      }
+      throw new CustomError("Please verify your email before logging in", 403);
     }
 
     user.lastLogin = new Date();

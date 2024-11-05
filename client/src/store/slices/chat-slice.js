@@ -20,6 +20,32 @@ export const createChatSlice = (set, get) => ({
       set({ channels: [channel, ...channels] });
     }
   },
+  updateChannel: (updatedChannel) => {
+    const channels = get().channels.map((channel) =>
+      channel._id === updatedChannel._id ? updatedChannel : channel
+    );
+    set({ channels });
+
+    const selectedChatData = get().selectedChatData;
+    if (selectedChatData?._id === updatedChannel._id) {
+      set({ selectedChatData: updatedChannel });
+    }
+  },
+  removeChannel: (channelId) => {
+    const channels = get().channels.filter(
+      (channel) => channel._id !== channelId
+    );
+    set({ channels });
+
+    const selectedChatData = get().selectedChatData;
+    if (selectedChatData?._id === channelId) {
+      set({
+        selectedChatData: undefined,
+        selectedChatType: undefined,
+        selectedChatMessages: [],
+      });
+    }
+  },
   closeChat: () =>
     set({
       selectedChatData: undefined,

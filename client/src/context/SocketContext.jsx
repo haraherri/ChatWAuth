@@ -70,12 +70,40 @@ export const SocketProvider = ({ children }) => {
         console.log(`Received new room: ${room._id}`);
       };
 
-      const handleJoinedRoom = (roomId) => {
-        console.log(`Joined room: ${roomId}`);
+      const handleUserJoinedRoom = (data) => {
+        const { updateChannel } = useAppStore.getState();
+        const updatedChannel = {
+          ...data.room,
+          members: data.room.members,
+        };
+        updateChannel(updatedChannel);
+
+        if (data.room.members.some((member) => member._id === userInfo.id)) {
+          const { addChannel } = useAppStore.getState();
+          addChannel(data.room);
+        }
+
+        toast.success(`New members joined the room`);
       };
 
-      const handleLeftRoom = (roomId) => {
-        console.log(`Left room: ${roomId}`);
+      const handleUserLeftRoom = (data) => {
+        const { updateChannel, removeChannel } = useAppStore.getState();
+
+        if (data.userId === userInfo.id) {
+          socket.current.emit("leave_room", data.roomId);
+          removeChannel(data.roomId);
+          toast.info("You have been removed from the room");
+          return;
+        }
+
+        const updatedChannel = {
+          ...data.room,
+          members: data.room.members,
+        };
+        updateChannel(updatedChannel);
+
+        toast.info(`A member has left the room`);
+        console.log(`User left room: ${data.room._id}`);
       };
 
       const handleRoomError = (error) => {
@@ -86,22 +114,22 @@ export const SocketProvider = ({ children }) => {
         console.log("Connected to socket server");
       });
 
-      // Existing message handlers
+      // Message handlers
       socket.current.on("newMessage", handleNewMessage);
       socket.current.on("messageSent", handleMessageSent);
 
-      // New room handlers
+      // Room handlers
       socket.current.on("newRoom", handleNewRoom);
-      socket.current.on("joinedRoom", handleJoinedRoom);
-      socket.current.on("leftRoom", handleLeftRoom);
+      socket.current.on("userJoinedRoom", handleUserJoinedRoom);
+      socket.current.on("userLeftRoom", handleUserLeftRoom);
       socket.current.on("roomError", handleRoomError);
 
       return () => {
         socket.current.off("newMessage");
         socket.current.off("messageSent");
         socket.current.off("newRoom");
-        socket.current.off("joinedRoom");
-        socket.current.off("leftRoom");
+        socket.current.off("userJoinedRoom");
+        socket.current.off("userLeftRoom");
         socket.current.off("roomError");
         socket.current.disconnect();
       };
