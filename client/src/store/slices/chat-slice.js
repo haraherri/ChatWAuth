@@ -13,7 +13,12 @@ export const createChatSlice = (set, get) => ({
     set({ directMessagesContacts }),
   addChannel: (channel) => {
     const channels = get().channels;
-    set({ channels: [channel, ...channels] });
+    const channelExists = channels.some(
+      (existingChannel) => existingChannel._id === channel._id
+    );
+    if (!channelExists) {
+      set({ channels: [channel, ...channels] });
+    }
   },
   closeChat: () =>
     set({

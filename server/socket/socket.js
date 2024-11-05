@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import Message from "../models/message.model.js";
 import Room from "../models/room.model.js";
 
+export const userSocketMap = new Map();
 const setupSocket = (server) => {
   const io = new Server(server, {
     cors: {
@@ -10,8 +11,6 @@ const setupSocket = (server) => {
       credentials: true,
     },
   });
-
-  const userSocketMap = new Map();
 
   const sendMessage = async (message) => {
     try {

@@ -67,6 +67,7 @@ export const SocketProvider = ({ children }) => {
       const handleNewRoom = (room) => {
         const { addChannel } = useAppStore.getState();
         addChannel(room);
+        console.log(`Received new room: ${room._id}`);
       };
 
       const handleJoinedRoom = (roomId) => {

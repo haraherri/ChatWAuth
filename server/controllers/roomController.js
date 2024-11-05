@@ -2,6 +2,7 @@ import { CustomError } from "../middlewares/error.js";
 import Message from "../models/message.model.js";
 import Room from "../models/room.model.js";
 import User from "../models/user.model.js";
+import { userSocketMap } from "../socket/socket.js";
 
 export const createRoom = async (req, res, next) => {
   const { name, memberIds } = req.body;
@@ -30,10 +31,28 @@ export const createRoom = async (req, res, next) => {
       members: [...new Set([req.userId, ...uniqueMemberIds])],
     });
 
+    const populatedRoom = await Room.findById(newRoom._id)
+      .populate("creator", "id email firstName lastName image color")
+      .populate("members", "id email firstName lastName image color");
+
+    const io = req.app.get("io");
+    if (io) {
+      const roomId = populatedRoom._id.toString();
+
+      const memberSocketIds = populatedRoom.members
+        .map((member) => userSocketMap.get(member._id.toString()))
+        .filter((socketId) => socketId);
+
+      memberSocketIds.forEach((socketId) => {
+        io.sockets.sockets.get(socketId)?.join(roomId);
+      });
+
+      io.to(roomId).emit("newRoom", populatedRoom);
+    }
     res.status(201).json({
       success: true,
       message: "Room created successfully",
-      rooms: newRoom,
+      rooms: populatedRoom,
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -42,6 +61,7 @@ export const createRoom = async (req, res, next) => {
     next(error);
   }
 };
+
 export const getUserRooms = async (req, res, next) => {
   try {
     const rooms = await Room.find({

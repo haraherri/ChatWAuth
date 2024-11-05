@@ -29,6 +29,8 @@ const MessageSchema = new mongoose.Schema(
       required: function () {
         return this.messageType === "text";
       },
+      maxlength: [4000, "Message cannot be longer than 4000 characters"],
+      trim: true,
     },
     fileUrl: {
       type: String,

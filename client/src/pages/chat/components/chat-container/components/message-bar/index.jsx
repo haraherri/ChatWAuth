@@ -18,15 +18,20 @@ const MessageBar = () => {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) return;
+
+    if (trimmedMessage.length > 4000) {
+      toast.error("Message cannot be longer than 4000 characters");
+      return;
+    }
 
     const messageData = {
       sender: userInfo.id,
-      content: message,
+      content: trimmedMessage,
       messageType: "text",
       fileUrl: undefined,
     };
-
     if (selectedChatType === "contact") {
       messageData.recipient = selectedChatData._id;
     } else if (selectedChatType === "channel") {
