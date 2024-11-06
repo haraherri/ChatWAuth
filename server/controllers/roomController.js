@@ -99,7 +99,7 @@ export const getRoomMessages = async (req, res, next) => {
       deletedAt: null,
     })
       .sort({ createdAt: 1 })
-      .populate("sender", "firstName lastName email image");
+      .populate("sender", "firstName lastName email image color");
 
     res.json({
       success: true,
@@ -188,6 +188,8 @@ export const addUsersToRoom = async (req, res, next) => {
 
 export const removeUserFromRoom = async (req, res, next) => {
   const { roomId, userId } = req.params;
+  const currentUserId = req.userId;
+  const currentUserRole = req.userRole;
 
   try {
     const room = await Room.findOne({
@@ -202,8 +204,23 @@ export const removeUserFromRoom = async (req, res, next) => {
     if (!room.members.includes(userId)) {
       throw new CustomError("User is not a member of this room", 400);
     }
+
     if (room.creator.toString() === userId) {
       throw new CustomError("Cannot remove room creator", 400);
+    }
+
+    if (currentUserId === userId && currentUserRole === "moderator") {
+      throw new CustomError(
+        "Moderators cannot remove themselves from room",
+        400
+      );
+    }
+
+    if (currentUserRole === "moderator") {
+      const userToRemove = await User.findById(userId);
+      if (userToRemove.role === "admin") {
+        throw new CustomError("Moderators cannot remove admins from room", 403);
+      }
     }
 
     const updatedRoom = await Room.findByIdAndUpdate(

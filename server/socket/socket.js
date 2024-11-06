@@ -91,11 +91,10 @@ const setupSocket = (server) => {
   io.on("connection", (socket) => {
     const userId = socket.handshake.query.userId;
 
-    if (userId) {
+    if (userId && userId !== "undefined") {
       userSocketMap.set(userId, socket.id);
       console.log(`User Connected ${userId} with socket id ${socket.id}`);
 
-      // Auto-join user's rooms
       Room.find({ members: userId, deletedAt: null })
         .then((rooms) => {
           rooms.forEach((room) => {

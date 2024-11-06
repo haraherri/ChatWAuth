@@ -123,51 +123,56 @@ const MessageBar = () => {
 
   return (
     <div className="h-[12vh] bg-[#1c1d25] flex justify-center items-center px-8 mb-6 gap-6">
-      <div className="flex-1 flex items-center bg-[#2a2b33] rounded-xl overflow-hidden pr-2 h-[56px]">
-        <div className="flex-1 relative flex items-center h-full">
-          <Textarea
-            placeholder="Enter Message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            style={{
-              height: "100%",
-              maxHeight: "100%",
-            }}
-          />
-        </div>
+      <div className="flex-1 relative flex items-center">
+        <div className="flex-1 flex items-center bg-[#2a2b33] rounded-xl h-[56px] w-full">
+          <div className="flex-1 relative flex items-center h-full">
+            <Textarea
+              placeholder="Enter Message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              style={{
+                height: "100%",
+                maxHeight: "100%",
+              }}
+            />
+          </div>
 
-        <div className="flex items-center gap-2 px-1">
-          <button
-            className="text-neutral-500 hover:text-white focus:outline-none duration-300 transition-all p-2 rounded-full hover:bg-[#3a3b43]"
-            onClick={handleAttachmentClick}
-          >
-            <GrAttachment className="text-xl" />
-          </button>
-          <input
-            type="file"
-            className="hidden"
-            onChange={handleAttachmentChange}
-            ref={fileInputRef}
-          />
+          <div className="flex items-center gap-2 px-1">
+            <button
+              className="text-neutral-500 hover:text-white focus:outline-none duration-300 transition-all p-2 rounded-full hover:bg-[#3a3b43]"
+              onClick={handleAttachmentClick}
+            >
+              <GrAttachment className="text-xl" />
+            </button>
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleAttachmentChange}
+              ref={fileInputRef}
+            />
 
-          <div className="relative">
             <button
               className="text-neutral-500 hover:text-white focus:outline-none duration-300 transition-all p-2 rounded-full hover:bg-[#3a3b43]"
               onClick={() => setEmojiPickerOpen(true)}
             >
               <RiEmojiStickerLine className="text-xl" />
             </button>
-            <div className="absolute bottom-16 right-0" ref={emojiRef}>
-              <EmojiPicker
-                theme="dark"
-                open={emojiPickerOpen}
-                onEmojiClick={handleAddEmoji}
-                autoFocusSearch={false}
-              />
-            </div>
           </div>
+        </div>
+
+        <div
+          className="absolute bottom-full right-0 mb-2"
+          ref={emojiRef}
+          style={{ zIndex: 50 }}
+        >
+          <EmojiPicker
+            theme="dark"
+            open={emojiPickerOpen}
+            onEmojiClick={handleAddEmoji}
+            autoFocusSearch={false}
+          />
         </div>
       </div>
 

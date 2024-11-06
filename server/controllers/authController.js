@@ -278,6 +278,7 @@ export const updateProfile = async (req, res, next) => {
       profileSetup: userData.profileSetup,
       firstName: userData.firstName,
       lastName: userData.lastName,
+      role: userData.role,
       image: userData.image,
       color: userData.color,
       isEmailVerified: userData.isEmailVerified,
