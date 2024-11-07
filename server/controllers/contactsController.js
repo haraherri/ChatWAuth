@@ -19,6 +19,7 @@ export const searchContacts = async (req, res, next) => {
     const contacts = await User.find({
       $and: [
         { _id: { $ne: req.userId } },
+        { deletedAt: null },
         {
           $or: [
             { firstName: regex },
@@ -43,6 +44,7 @@ export const searchContacts = async (req, res, next) => {
     next(error);
   }
 };
+
 export const getContactforDMList = async (req, res, next) => {
   try {
     let { userId } = req;
@@ -79,12 +81,18 @@ export const getContactforDMList = async (req, res, next) => {
       {
         $lookup: {
           from: "users",
-          localField: "_id",
-          foreignField: "_id",
+          let: { contactId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$contactId"] },
+                deletedAt: null,
+              },
+            },
+          ],
           as: "contactInfo",
         },
       },
-
       // Stage 5: extract array contactInfo
       {
         $unwind: "$contactInfo",
@@ -114,6 +122,7 @@ export const getContactforDMList = async (req, res, next) => {
     next(error);
   }
 };
+
 export const getAllContacts = async (req, res, next) => {
   try {
     const contacts = await User.aggregate([
@@ -152,6 +161,7 @@ export const getAllContacts = async (req, res, next) => {
           email: 1,
           image: 1,
           lastLogin: 1,
+          role: 1,
         },
       },
     ]);

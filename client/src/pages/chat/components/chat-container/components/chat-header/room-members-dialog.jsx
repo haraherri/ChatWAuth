@@ -42,13 +42,11 @@ const RoomMembersDialog = () => {
         const filteredContacts = response.data.contacts.filter(
           (contact) => !existingMemberIds.has(contact.value)
         );
-
         setContacts(filteredContacts);
       } catch (error) {
         toast.error(error.response?.data?.error || "Failed to fetch contacts");
       }
     };
-
     if (open && canManageRoom) {
       fetchContacts();
     }
@@ -122,41 +120,67 @@ const RoomMembersDialog = () => {
 
           <TabsContent value="members">
             <ScrollArea className="h-[300px]">
-              {selectedChatData.members.map((member) => (
-                <div
-                  key={member._id}
-                  className="flex items-center justify-between p-2 hover:bg-[#2f303b] rounded-md"
-                >
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      {member.image ? (
-                        <AvatarImage src={member.image} />
-                      ) : (
-                        <div
-                          className={`h-8 w-8 uppercase text-sm flex items-center justify-center rounded-full ${getColor(
-                            member.color
-                          )}`}
-                        >
+              {selectedChatData.members.map((member) => {
+                const isCurrentUser = member._id === userInfo?.id;
+                const isCreator = member._id === selectedChatData.creator._id;
+                const canRemoveMember =
+                  canManageRoom &&
+                  !isCreator &&
+                  !(
+                    userInfo?.role === "moderator" &&
+                    member.role === "moderator"
+                  );
+
+                return (
+                  <div
+                    key={member._id}
+                    className="flex items-center justify-between p-2 hover:bg-[#2f303b] rounded-md"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        {member.image ? (
+                          <AvatarImage src={member.image} />
+                        ) : (
+                          <div
+                            className={`h-8 w-8 uppercase text-sm flex items-center justify-center rounded-full ${getColor(
+                              member.color
+                            )}`}
+                          >
+                            {member.firstName
+                              ? member.firstName.split("").shift()
+                              : member.email.split("").shift()}
+                          </div>
+                        )}
+                      </Avatar>
+                      <div>
+                        <p className="text-sm text-neutral-200">
                           {member.firstName
-                            ? member.firstName.split("").shift()
-                            : member.email.split("").shift()}
+                            ? `${member.firstName} ${member.lastName}`
+                            : member.email}
+                          {isCurrentUser && (
+                            <span className="ml-2 text-xs text-neutral-400">
+                              (You)
+                            </span>
+                          )}
+                        </p>
+                        <div className="flex gap-1 items-center">
+                          {isCreator && (
+                            <span className="text-xs text-yellow-400">
+                              Creator
+                            </span>
+                          )}
+                          {member.role === "admin" && (
+                            <span className="text-xs text-blue-400">Admin</span>
+                          )}
+                          {member.role === "moderator" && (
+                            <span className="text-xs text-green-400">
+                              Moderator
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </Avatar>
-                    <div>
-                      <p className="text-sm text-neutral-200">
-                        {member.firstName
-                          ? `${member.firstName} ${member.lastName}`
-                          : member.email}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                  {canManageRoom &&
-                    selectedChatData.creator !== member._id &&
-                    !(
-                      userInfo?.role === "moderator" &&
-                      userInfo?._id === member._id
-                    ) && (
+                    {canRemoveMember && (
                       <Button
                         variant="destructive"
                         size="sm"
@@ -170,8 +194,9 @@ const RoomMembersDialog = () => {
                         )}
                       </Button>
                     )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </ScrollArea>
           </TabsContent>
 

@@ -29,9 +29,13 @@ const Profile = () => {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    if (userInfo.profileSetup) {
+    if (userInfo.firstName) {
       setFirstName(userInfo.firstName);
+    }
+    if (userInfo.lastName) {
       setLastName(userInfo.lastName);
+    }
+    if (userInfo.color !== undefined) {
       setSelectedColor(userInfo.color);
     }
     if (userInfo.image) {

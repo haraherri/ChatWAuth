@@ -32,8 +32,8 @@ export const createRoom = async (req, res, next) => {
     });
 
     const populatedRoom = await Room.findById(newRoom._id)
-      .populate("creator", "id email firstName lastName image color")
-      .populate("members", "id email firstName lastName image color");
+      .populate("creator", "id email firstName lastName image color role")
+      .populate("members", "id email firstName lastName image color role");
 
     const io = req.app.get("io");
     if (io) {
@@ -68,8 +68,8 @@ export const getUserRooms = async (req, res, next) => {
       members: req.userId,
       deletedAt: null,
     })
-      .populate("members", "firstName lastName email image")
-      .populate("creator", "firstName lastName email image")
+      .populate("members", "firstName lastName email image role color")
+      .populate("creator", "firstName lastName email image role color")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -153,7 +153,9 @@ export const addUsersToRoom = async (req, res, next) => {
         new: true,
         runValidators: true,
       }
-    ).populate("members", "id email firstName lastName image color");
+    )
+      .populate("members", "id email firstName lastName image color role")
+      .populate("creator", "id email firstName lastName image color role");
 
     const io = req.app.get("io");
     if (io) {
@@ -232,7 +234,9 @@ export const removeUserFromRoom = async (req, res, next) => {
         new: true,
         runValidators: true,
       }
-    ).populate("members", "id email firstName lastName image color");
+    )
+      .populate("members", "id email firstName lastName image color role")
+      .populate("creator", "id email firstName lastName image color role");
 
     const io = req.app.get("io");
     if (io) {
