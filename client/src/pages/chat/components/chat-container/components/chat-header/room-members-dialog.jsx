@@ -13,8 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiClient } from "@/lib/api-client";
 import { getColor } from "@/lib/utils";
 import { useAppStore } from "@/store";
-import { Loader2, Users } from "lucide-react";
+import { SEARCH_CONTACTS_ROUTES } from "@/utils/constants";
+import { Loader2, Users, UserX } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
+import { FaSpinner } from "react-icons/fa";
 import { toast } from "sonner";
 
 const RoomMembersDialog = () => {
@@ -23,6 +25,7 @@ const RoomMembersDialog = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [contacts, setContacts] = useState([]);
+  const [searchedContacts, setSearchedContacts] = useState([]);
 
   const canManageRoom = useMemo(() => {
     return ["admin", "moderator"].includes(userInfo?.role);
@@ -89,6 +92,44 @@ const RoomMembersDialog = () => {
       toast.error(error.response?.data?.error || "Failed to remove member");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async (value) => {
+    if (!value?.trim()) {
+      setSearchedContacts(contacts);
+      return contacts;
+    }
+
+    try {
+      const response = await apiClient.post(
+        SEARCH_CONTACTS_ROUTES,
+        { searchTerm: value },
+        { withCredentials: true }
+      );
+
+      // Filter out existing members from search results
+      const existingMemberIds = new Set(
+        selectedChatData.members.map((member) => member._id)
+      );
+      const formattedContacts = response.data.contacts
+        .filter((contact) => !existingMemberIds.has(contact._id))
+        .map((contact) => ({
+          value: contact._id,
+          label:
+            contact.firstName && contact.lastName
+              ? `${contact.firstName} ${contact.lastName}`.trim()
+              : contact.email,
+          email: contact.email,
+          image: contact.image,
+        }));
+
+      setSearchedContacts(formattedContacts);
+      return formattedContacts;
+    } catch (error) {
+      console.error(error);
+      setSearchedContacts(contacts);
+      return contacts;
     }
   };
 
@@ -204,10 +245,37 @@ const RoomMembersDialog = () => {
             <TabsContent value="add">
               <div className="space-y-4">
                 <MultipleSelector
-                  options={contacts}
-                  selectedValues={selectedUsers}
+                  key={`selector-${selectedUsers.length}`}
+                  className="rounded-lg border-none py-2 text-white bg-[#2c2e3b] min-h-[100px] max-h-[150px] overflow-y-auto"
+                  defaultOptions={contacts}
+                  onSearch={handleSearch}
+                  value={selectedUsers}
                   onChange={setSelectedUsers}
                   isDisabled={isLoading}
+                  delay={300}
+                  placeholder="Search users to add"
+                  commandProps={{
+                    className: "bg-[#2c2e3b] max-h-[200px] w-full",
+                  }}
+                  badgeClassName="bg-purple-600 hover:bg-purple-700 transition-colors inline-flex items-center"
+                  emptyIndicator={
+                    <div className="flex flex-col items-center justify-center w-full py-6 text-gray-400">
+                      <div className="w-12 h-12 mb-4 rounded-full bg-gray-600 flex items-center justify-center">
+                        <UserX className="w-6 h-6" />
+                      </div>
+                      <p className="text-sm font-medium text-center">
+                        No users found
+                      </p>
+                      <p className="text-xs opacity-70 text-center">
+                        Try searching with a different term
+                      </p>
+                    </div>
+                  }
+                  loadingIndicator={
+                    <div className="flex items-center justify-center py-4">
+                      <FaSpinner className="w-6 h-6 text-purple-500" />
+                    </div>
+                  }
                 />
                 <div className="flex justify-end">
                   <Button

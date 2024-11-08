@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaSpinner } from "react-icons/fa";
 import { Input } from "@/components/ui/input";
 import Lottie from "react-lottie";
 import { apiClient } from "@/lib/api-client";
@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useAppStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import MultipleSelector from "@/components/ui/multipleselect";
+import { UserX } from "lucide-react";
 
 const CreateChannel = () => {
   const { setSelectedChatType, setSelectedChatData, addChannel } =
@@ -41,11 +42,50 @@ const CreateChannel = () => {
       const response = await apiClient.get(GET_ALL_CONTACTS_ROUTES, {
         withCredentials: true,
       });
-      setAllContacts(response.data.contacts);
+      const formattedContacts = response.data.contacts.map((contact) => ({
+        value: contact.value,
+        label: contact.label,
+        email: contact.email,
+        image: contact.image,
+        lastLogin: contact.lastLogin,
+        role: contact.role,
+      }));
+      setAllContacts(formattedContacts);
     };
     getContacts();
   }, []);
 
+  const handleSearch = async (value) => {
+    if (!value?.trim()) {
+      setSearchedContacts(allContacts);
+      return allContacts;
+    }
+
+    try {
+      const response = await apiClient.post(
+        SEARCH_CONTACTS_ROUTES,
+        { searchTerm: value },
+        { withCredentials: true }
+      );
+
+      const formattedContacts = response.data.contacts.map((contact) => ({
+        value: contact._id,
+        label:
+          contact.firstName && contact.lastName
+            ? `${contact.firstName} ${contact.lastName}`.trim()
+            : contact.email,
+        email: contact.email,
+        image: contact.image,
+      }));
+
+      setSearchedContacts(formattedContacts);
+      return formattedContacts;
+    } catch (error) {
+      console.error(error);
+      setSearchedContacts(allContacts);
+      return allContacts;
+    }
+  };
   const createChannel = async () => {
     try {
       if (channelName.length > 0 && selectedContacts.length > 0) {
@@ -101,15 +141,35 @@ const CreateChannel = () => {
           </div>
           <div>
             <MultipleSelector
-              className="rounded-lg border-none py-2 text-white bg-[#2c2e3b]"
+              key={`selector-${selectedContacts.length}`}
+              className="rounded-lg border-none py-2 text-white bg-[#2c2e3b] min-h-[100px] max-h-[150px] overflow-y-auto"
               defaultOptions={allContacts}
+              onSearch={handleSearch}
               placeholder="Search Contacts"
               value={selectedContacts}
               onChange={setSelectedContacts}
+              delay={300}
+              commandProps={{
+                className: "bg-[#2c2e3b] max-h-[200px] w-full",
+              }}
+              badgeClassName="bg-purple-600 hover:bg-purple-700 transition-colors inline-flex items-center"
               emptyIndicator={
-                <p className="text-lg text-center leading-10 text-gray-600">
-                  No contacts found
-                </p>
+                <div className="flex flex-col items-center justify-center w-full py-6 text-gray-400">
+                  <div className="w-12 h-12 mb-4 rounded-full bg-gray-600 flex items-center justify-center">
+                    <UserX className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-medium text-center">
+                    No contacts found
+                  </p>
+                  <p className="text-xs opacity-70 text-center">
+                    Try searching with a different term
+                  </p>
+                </div>
+              }
+              loadingIndicator={
+                <div className="flex items-center justify-center py-4">
+                  <FaSpinner className="w-6 h-6 text-purple-500" />
+                </div>
               }
             />
           </div>
