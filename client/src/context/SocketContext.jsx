@@ -63,7 +63,13 @@ export const SocketProvider = ({ children }) => {
           toast.error("Failed to send message");
         }
       };
-
+      const handleMessageDeleted = (data) => {
+        const { updateMessage } = useAppStore.getState();
+        updateMessage(data.messageId, {
+          deletedAt: data.deletedAt,
+          deletedBy: data.deletedBy,
+        });
+      };
       const handleNewRoom = (room) => {
         const { addChannel } = useAppStore.getState();
         addChannel(room);
@@ -117,6 +123,7 @@ export const SocketProvider = ({ children }) => {
       // Message handlers
       socket.current.on("newMessage", handleNewMessage);
       socket.current.on("messageSent", handleMessageSent);
+      socket.current.on("messageDeleted", handleMessageDeleted);
 
       // Room handlers
       socket.current.on("newRoom", handleNewRoom);
@@ -127,6 +134,7 @@ export const SocketProvider = ({ children }) => {
       return () => {
         socket.current.off("newMessage");
         socket.current.off("messageSent");
+        socket.current.off("messageDeleted");
         socket.current.off("newRoom");
         socket.current.off("userJoinedRoom");
         socket.current.off("userLeftRoom");

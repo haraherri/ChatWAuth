@@ -8,6 +8,14 @@ import { Download, FileIcon, X } from "lucide-react";
 import moment from "moment";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Pin, Trash2 } from "lucide-react";
+import { useSocket } from "@/context/SocketContext";
 
 const MessageContainer = () => {
   const containerRef = useRef(null);
@@ -15,6 +23,7 @@ const MessageContainer = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const socket = useSocket();
 
   const {
     selectedChatType,
@@ -95,6 +104,17 @@ const MessageContainer = () => {
       getMessages();
     }
   }, [selectedChatType, selectedChatData, setSelectedChatMessages]);
+
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      socket.emit("deleteMessage", {
+        messageId,
+        roomId: selectedChatData._id,
+      });
+    } catch (error) {
+      toast.error("Failed to delete message");
+    }
+  };
 
   const handleImageLoad = (senderId) => {
     if (senderId === userInfo.id) {
@@ -240,7 +260,7 @@ const MessageContainer = () => {
 
   const renderChannelMessages = (message) => (
     <div
-      className={`mt-5 ${
+      className={`mt-5 group ${
         message.sender._id === userInfo.id ? "text-right" : "text-left"
       }`}
     >
@@ -271,61 +291,101 @@ const MessageContainer = () => {
         )}
       </div>
 
-      {message.messageType === "text" && (
+      <div className="inline-flex items-start gap-2 max-w-[50%] relative">
+        {/* Dropdown menu repositioned */}
         <div
           className={`${
-            message.sender._id === userInfo.id
-              ? "bg-[#8417ff] text-[#ffffff] border-[#8417ff]/50"
-              : "bg-[#2a2b33]/5 text-white/80 border-[#ffffff]/20"
-          } border inline-block p-4 rounded my-1 max-w-[50%] break-words font-bold`}
-          style={{
-            borderRadius:
-              message.sender._id !== userInfo.id
-                ? "20px 20px 20px 0px"
-                : "20px 20px 0px 20px",
-          }}
+            message.sender._id === userInfo.id ? "order-first" : "order-last"
+          } opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center`}
         >
-          {message.content}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 hover:bg-gray-700/50 rounded">
+                <MoreHorizontal className="h-4 w-4 text-gray-400" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align={message.sender._id === userInfo.id ? "start" : "end"}
+              className="w-40"
+            >
+              <DropdownMenuItem className="gap-2 cursor-pointer">
+                <Pin className="h-4 w-4" />
+                <span>Pin message</span>
+              </DropdownMenuItem>
+              {(userInfo.role === "admin" || userInfo.role === "moderator") && (
+                <DropdownMenuItem
+                  className="gap-2 text-red-500 focus:text-red-500 cursor-pointer"
+                  onClick={() => handleDeleteMessage(message._id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete message</span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      )}
 
-      {message.messageType === "file" &&
-        message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
-          <div className="max-w-[300px] inline-block">
-            <img
-              src={message.fileUrl}
-              alt="Image message"
-              className="rounded-lg border border-gray-600 hover:scale-105 transition-transform cursor-pointer"
-              onClick={() => handleImageClick(message.fileUrl)}
-              onLoad={() => handleImageLoad(message.sender._id)}
-            />
-          </div>
-        )}
-
-      {message.messageType === "file" &&
-        !message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
+        {message.messageType === "text" && (
           <div
             className={`${
               message.sender._id === userInfo.id
-                ? "bg-[#8417ff] text-[#ffffff]"
-                : "bg-[#2a2b33]/5 text-white/80"
-            } border rounded p-3 inline-flex items-center gap-2 hover:opacity-80`}
+                ? "bg-[#8417ff] text-[#ffffff] border-[#8417ff]/50"
+                : "bg-[#2a2b33]/5 text-white/80 border-[#ffffff]/20"
+            } border p-4 rounded my-1 break-words font-bold flex-grow`}
+            style={{
+              borderRadius:
+                message.sender._id !== userInfo.id
+                  ? "20px 20px 20px 0px"
+                  : "20px 20px 0px 20px",
+            }}
           >
-            <FileIcon size={20} />
-            <div className="flex flex-col">
-              <span className="text-sm">
-                {message.fileUrl.split("/").pop()}
+            {message.deletedAt ? (
+              <span className="italic text-gray-400">
+                This message has been deleted.
               </span>
-            </div>
-            <button
-              onClick={() => handleFileDownload(message.fileUrl)}
-              className="ml-2 cursor-pointer hover:scale-110"
-            >
-              <Download size={18} />
-            </button>
+            ) : (
+              message.content
+            )}
           </div>
         )}
 
+        {message.messageType === "file" &&
+          message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
+            <div className="max-w-[300px] inline-block">
+              <img
+                src={message.fileUrl}
+                alt="Image message"
+                className="rounded-lg border border-gray-600 hover:scale-105 transition-transform cursor-pointer"
+                onClick={() => handleImageClick(message.fileUrl)}
+                onLoad={() => handleImageLoad(message.sender._id)}
+              />
+            </div>
+          )}
+
+        {message.messageType === "file" &&
+          !message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
+            <div
+              className={`${
+                message.sender._id === userInfo.id
+                  ? "bg-[#8417ff] text-[#ffffff]"
+                  : "bg-[#2a2b33]/5 text-white/80"
+              } border rounded p-3 inline-flex items-center gap-2 hover:opacity-80`}
+            >
+              <FileIcon size={20} />
+              <div className="flex flex-col">
+                <span className="text-sm">
+                  {message.fileUrl.split("/").pop()}
+                </span>
+              </div>
+              <button
+                onClick={() => handleFileDownload(message.fileUrl)}
+                className="ml-2 cursor-pointer hover:scale-110"
+              >
+                <Download size={18} />
+              </button>
+            </div>
+          )}
+      </div>
       <div className="text-xs text-gray-600">
         {moment(message.createdAt).format("LT")}
       </div>

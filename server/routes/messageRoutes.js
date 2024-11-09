@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { verifyToken } from "../middlewares/verifyToken.js";
+import { checkRole, verifyToken } from "../middlewares/verifyToken.js";
 import {
+  deleteMessage,
   getMessagesBetweenUsers,
   uploadMessageFile,
 } from "../controllers/messageController.js";
@@ -14,6 +15,12 @@ router.post(
   verifyToken,
   uploadChatFile.single("file"),
   uploadMessageFile
+);
+router.delete(
+  "/delete-message/:messageId",
+  verifyToken,
+  checkRole("admin", "moderator"),
+  deleteMessage
 );
 
 export default router;

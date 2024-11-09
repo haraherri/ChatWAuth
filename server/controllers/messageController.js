@@ -78,3 +78,25 @@ export const uploadMessageFile = async (req, res, next) => {
     next(error);
   }
 };
+export const deleteMessage = async (req, res, next) => {
+  try {
+    const { messageId } = req.params;
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      throw new CustomError("Message not found", 404);
+    }
+
+    if (!message.room) {
+      throw new CustomError("Can only delete messages in rooms", 400);
+    }
+
+    message.deletedAt = new Date();
+    message.deletedBy = req.userId;
+    await message.save();
+
+    res.status(200).json({ message: "Message deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};

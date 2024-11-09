@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import Message from "../models/message.model.js";
 import Room from "../models/room.model.js";
+import User from "../models/user.model.js";
 
 export const userSocketMap = new Map();
 const setupSocket = (server) => {
@@ -49,7 +50,42 @@ const setupSocket = (server) => {
       }
     }
   };
+  const deleteMessage = async (socket, { messageId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message || !message.room) {
+        socket.emit("deleteMessageError", {
+          error: "Message not found or not in a room",
+        });
+        return;
+      }
 
+      const userId = socket.handshake.query.userId;
+      const user = await User.findById(userId);
+
+      if (!user) {
+        socket.emit("deleteMessageError", {
+          error: "User not found",
+        });
+        return;
+      }
+
+      message.deletedAt = new Date();
+      message.deletedBy = userId;
+      await message.save();
+
+      // Notify all users in the room about the deleted message
+      io.to(message.room.toString()).emit("messageDeleted", {
+        messageId,
+        deletedBy: userId,
+        deletedAt: message.deletedAt,
+      });
+    } catch (error) {
+      socket.emit("deleteMessageError", {
+        error: error.message,
+      });
+    }
+  };
   // Handle joining room
   const joinRoom = async (socket, roomId) => {
     try {
@@ -105,6 +141,7 @@ const setupSocket = (server) => {
     }
 
     socket.on("sendMessage", sendMessage);
+    socket.on("deleteMessage", (data) => deleteMessage(socket, data));
     socket.on("joinRoom", (roomId) => joinRoom(socket, roomId));
     socket.on("leaveRoom", (roomId) => leaveRoom(socket, roomId));
     socket.on("disconnect", () => disconnect(socket));

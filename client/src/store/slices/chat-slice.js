@@ -73,4 +73,11 @@ export const createChatSlice = (set, get) => ({
       ],
     });
   },
+  updateMessage: (messageId, updates) => {
+    const selectedChatMessages = get().selectedChatMessages.map((message) =>
+      message._id === messageId ? { ...message, ...updates } : message
+    );
+
+    set({ selectedChatMessages });
+  },
 });
