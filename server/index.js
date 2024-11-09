@@ -13,7 +13,7 @@ import { fileURLToPath } from "url";
 import messageRoutes from "./routes/messageRoutes.js";
 import roomRoutes from "./routes/roomRoutes.js";
 import setupSocket from "./socket/socket.js";
-
+import { initCronJobs } from "./config/cronJobs.js";
 dotenv.config();
 
 const app = express();
@@ -51,6 +51,7 @@ app.use("/api/rooms", roomRoutes);
 (async () => {
   try {
     await connectDB();
+    initCronJobs();
     server.listen(PORT, () => {
       console.log(`Backend server is running on port ${PORT}`);
     });

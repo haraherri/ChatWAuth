@@ -1,30 +1,13 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { apiClient } from "@/lib/api-client";
-import { getColor } from "@/lib/utils";
-import { useAppStore } from "@/store";
-import { GET_ALL_MESSAGES_ROUTES } from "@/utils/constants";
-import { Download, FileIcon, X } from "lucide-react";
+import { useEffect } from "react";
 import moment from "moment";
-import React, { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pin, Trash2 } from "lucide-react";
-import { useSocket } from "@/context/SocketContext";
+import { useAppStore } from "@/store";
+import { useMessageScroll } from "@/hooks/useMessageScroll";
+import { useMessageHandlers } from "@/hooks/useMessageHandlers";
+import { ChannelMessage } from "./ChannelMessage";
+import { DMMessage } from "./DMMessage";
+import { ImagePreviewModal } from "./ImagePreviewModal";
 
 const MessageContainer = () => {
-  const containerRef = useRef(null);
-  const scrollRef = useRef(null);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [previousMessageCount, setPreviousMessageCount] = useState(0);
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const socket = useSocket();
-
   const {
     selectedChatType,
     selectedChatData,
@@ -33,364 +16,35 @@ const MessageContainer = () => {
     setSelectedChatMessages,
   } = useAppStore();
 
-  const scrollToBottom = (behavior = "auto") => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  };
+  const { containerRef, scrollRef, scrollToBottom, shouldAutoScroll } =
+    useMessageScroll(selectedChatMessages);
 
-  const handleScroll = () => {
-    if (containerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-      setShouldAutoScroll(isNearBottom);
-    }
-  };
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener("scroll", handleScroll);
-      return () => container.removeEventListener("scroll", handleScroll);
-    }
-  }, []);
+  const {
+    selectedImage,
+    setSelectedImage,
+    handleDeleteMessage,
+    handleImageClick,
+    handleImageLoad,
+    handleImageDownload,
+    handleFileDownload,
+    fetchMessages,
+  } = useMessageHandlers(
+    setSelectedChatMessages,
+    selectedChatType,
+    selectedChatData
+  );
 
   useEffect(() => {
-    if (selectedChatMessages.length > previousMessageCount) {
-      const latestMessage =
-        selectedChatMessages[selectedChatMessages.length - 1];
-      const isCurrentUserMessage = latestMessage?.sender === userInfo?.id;
-      if (isCurrentUserMessage || shouldAutoScroll) {
-        scrollToBottom("smooth");
-      }
-    }
-    setPreviousMessageCount(selectedChatMessages.length);
-  }, [selectedChatMessages]);
-
-  useEffect(() => {
-    const getMessages = async () => {
-      try {
-        let response;
-        if (selectedChatType === "contact") {
-          response = await apiClient.post(
-            GET_ALL_MESSAGES_ROUTES,
-            {
-              userId2: selectedChatData._id,
-            },
-            { withCredentials: true }
-          );
-        } else if (selectedChatType === "channel") {
-          response = await apiClient.get(
-            `/api/rooms/${selectedChatData._id}/messages`,
-            { withCredentials: true }
-          );
-        }
-
-        if (response?.data?.messages) {
-          setSelectedChatMessages(response.data.messages);
-          setPreviousMessageCount(response.data.messages.length);
-          setTimeout(() => {
-            scrollToBottom();
-          }, 100);
-        }
-      } catch (error) {
-        if (error.response?.data?.error) {
-          toast.error(error.response.data.error);
-        }
-      }
-    };
-
     if (selectedChatData._id) {
-      getMessages();
+      const initMessages = async () => {
+        const messageCount = await fetchMessages();
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      };
+      initMessages();
     }
-  }, [selectedChatType, selectedChatData, setSelectedChatMessages]);
-
-  const handleDeleteMessage = async (messageId) => {
-    try {
-      socket.emit("deleteMessage", {
-        messageId,
-        roomId: selectedChatData._id,
-      });
-    } catch (error) {
-      toast.error("Failed to delete message");
-    }
-  };
-
-  const handleImageLoad = (senderId) => {
-    if (senderId === userInfo.id) {
-      console.log(userInfo.id);
-      scrollToBottom("smooth");
-    }
-  };
-
-  const handleImageClick = (imageUrl) => {
-    setSelectedImage(imageUrl);
-  };
-  const handleImageDownload = async (imageUrl) => {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = imageUrl.split("/").pop();
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading image:", error);
-      toast.error("Failed to download image");
-    }
-  };
-
-  const handleFileDownload = async (fileUrl) => {
-    try {
-      const response = await fetch(fileUrl);
-      if (!response.ok) throw new Error("Download failed");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileUrl.split("/").pop();
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading file:", error);
-      toast.error("Failed to download file");
-    }
-  };
-
-  const ImagePreviewModal = ({ imageUrl, onClose }) => (
-    <Dialog open={!!imageUrl} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 bg-transparent border-none">
-        <div className="relative w-full h-full">
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
-            <button
-              onClick={() => handleImageDownload(imageUrl)}
-              className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-            >
-              <Download className="w-6 h-6 text-white" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-            >
-              <X className="w-6 h-6 text-white" />
-            </button>
-          </div>
-          <img
-            src={imageUrl}
-            alt="Preview"
-            className="max-w-full max-h-[85vh] object-contain mx-auto"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
-  const renderDMMessages = (message) => (
-    <div
-      className={`mt-5 ${
-        message.sender === selectedChatData._id ? "text-left" : "text-right"
-      }`}
-    >
-      {message.messageType === "text" && (
-        <div
-          className={`${
-            message.sender !== selectedChatData._id
-              ? " bg-[#8417ff] text-[#ffffff] border-[#8417ff]/50 font-bold"
-              : " bg-[#2a2b33]/5 text-white/80 border-[#ffffff]/20 font-bold"
-          } border inline-block p-4 rounded my-1 max-w-[50%] break-words`}
-          style={{
-            borderRadius:
-              message.sender === selectedChatData._id
-                ? "20px 20px 20px 0px" // Sender's message
-                : "20px 20px 0px 20px", // Receiver's message
-          }}
-        >
-          {message.content}
-        </div>
-      )}
-      {message.messageType === "file" &&
-        message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
-          <div className="max-w-[300px] inline-block">
-            <img
-              src={message.fileUrl}
-              alt="Image message"
-              className="rounded-lg border border-gray-600 hover:scale-105 transition-transform cursor-pointer"
-              onClick={() => handleImageClick(message.fileUrl)}
-              onLoad={() => handleImageLoad(message.sender)}
-            />
-          </div>
-        )}
-
-      {message.messageType === "file" &&
-        !message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
-          <div
-            className={`${
-              message.sender !== selectedChatData._id
-                ? "bg-[#8417ff] text-[#ffffff]"
-                : "bg-[#2a2b33]/5 text-white/80"
-            } border rounded p-3 inline-flex items-center gap-2 hover:opacity-80`}
-          >
-            <FileIcon size={20} />
-            <div className="flex flex-col">
-              <span className="text-sm">
-                {message.fileUrl.split("/").pop()}
-              </span>
-            </div>
-            <button
-              onClick={() => handleFileDownload(message.fileUrl)}
-              className="ml-2 cursor-pointer hover:scale-110"
-            >
-              <Download size={18} />
-            </button>
-          </div>
-        )}
-
-      <div className="text-xs text-gray-600">
-        {moment(message.createdAt).format("LT")}
-      </div>
-    </div>
-  );
-
-  const renderChannelMessages = (message) => (
-    <div
-      className={`mt-5 group ${
-        message.sender._id === userInfo.id ? "text-right" : "text-left"
-      }`}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        {message.sender._id !== userInfo.id && (
-          <>
-            <Avatar className="h-6 w-6">
-              {message.sender.image ? (
-                <AvatarImage
-                  src={message.sender.image}
-                  alt="profile"
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <AvatarFallback
-                  className={`uppercase text-xs ${getColor(
-                    message.sender.color
-                  )}`}
-                >
-                  {message.sender.firstName?.charAt(0)}
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <span className="text-sm text-white/80">
-              {message.sender.firstName} {message.sender.lastName}
-            </span>
-          </>
-        )}
-      </div>
-
-      <div className="inline-flex items-start gap-2 max-w-[50%] relative">
-        {/* Dropdown menu repositioned */}
-        <div
-          className={`${
-            message.sender._id === userInfo.id ? "order-first" : "order-last"
-          } opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center`}
-        >
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-1 hover:bg-gray-700/50 rounded">
-                <MoreHorizontal className="h-4 w-4 text-gray-400" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align={message.sender._id === userInfo.id ? "start" : "end"}
-              className="w-40"
-            >
-              <DropdownMenuItem className="gap-2 cursor-pointer">
-                <Pin className="h-4 w-4" />
-                <span>Pin message</span>
-              </DropdownMenuItem>
-              {(userInfo.role === "admin" || userInfo.role === "moderator") && (
-                <DropdownMenuItem
-                  className="gap-2 text-red-500 focus:text-red-500 cursor-pointer"
-                  onClick={() => handleDeleteMessage(message._id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Delete message</span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {message.messageType === "text" && (
-          <div
-            className={`${
-              message.sender._id === userInfo.id
-                ? "bg-[#8417ff] text-[#ffffff] border-[#8417ff]/50"
-                : "bg-[#2a2b33]/5 text-white/80 border-[#ffffff]/20"
-            } border p-4 rounded my-1 break-words font-bold flex-grow`}
-            style={{
-              borderRadius:
-                message.sender._id !== userInfo.id
-                  ? "20px 20px 20px 0px"
-                  : "20px 20px 0px 20px",
-            }}
-          >
-            {message.deletedAt ? (
-              <span className="italic text-gray-400">
-                This message has been deleted.
-              </span>
-            ) : (
-              message.content
-            )}
-          </div>
-        )}
-
-        {message.messageType === "file" &&
-          message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
-            <div className="max-w-[300px] inline-block">
-              <img
-                src={message.fileUrl}
-                alt="Image message"
-                className="rounded-lg border border-gray-600 hover:scale-105 transition-transform cursor-pointer"
-                onClick={() => handleImageClick(message.fileUrl)}
-                onLoad={() => handleImageLoad(message.sender._id)}
-              />
-            </div>
-          )}
-
-        {message.messageType === "file" &&
-          !message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i) && (
-            <div
-              className={`${
-                message.sender._id === userInfo.id
-                  ? "bg-[#8417ff] text-[#ffffff]"
-                  : "bg-[#2a2b33]/5 text-white/80"
-              } border rounded p-3 inline-flex items-center gap-2 hover:opacity-80`}
-            >
-              <FileIcon size={20} />
-              <div className="flex flex-col">
-                <span className="text-sm">
-                  {message.fileUrl.split("/").pop()}
-                </span>
-              </div>
-              <button
-                onClick={() => handleFileDownload(message.fileUrl)}
-                className="ml-2 cursor-pointer hover:scale-110"
-              >
-                <Download size={18} />
-              </button>
-            </div>
-          )}
-      </div>
-      <div className="text-xs text-gray-600">
-        {moment(message.createdAt).format("LT")}
-      </div>
-    </div>
-  );
+  }, [selectedChatType, selectedChatData]);
 
   const renderMessages = () => {
     let lastDate = null;
@@ -406,9 +60,28 @@ const MessageContainer = () => {
               {moment(message.createdAt).format("LL")}
             </div>
           )}
-          {selectedChatType === "contact"
-            ? renderDMMessages(message)
-            : renderChannelMessages(message)}
+          {selectedChatType === "contact" ? (
+            <DMMessage
+              message={message}
+              selectedChatData={selectedChatData}
+              onImageClick={handleImageClick}
+              onImageLoad={(senderId) =>
+                handleImageLoad(senderId, userInfo, scrollToBottom)
+              }
+              onFileDownload={handleFileDownload}
+            />
+          ) : (
+            <ChannelMessage
+              message={message}
+              userInfo={userInfo}
+              onImageClick={handleImageClick}
+              onImageLoad={(senderId) =>
+                handleImageLoad(senderId, userInfo, scrollToBottom)
+              }
+              onFileDownload={handleFileDownload}
+              onDeleteMessage={handleDeleteMessage}
+            />
+          )}
         </div>
       );
     });
@@ -427,6 +100,7 @@ const MessageContainer = () => {
       <ImagePreviewModal
         imageUrl={selectedImage}
         onClose={() => setSelectedImage(null)}
+        onDownload={handleImageDownload}
       />
     </>
   );

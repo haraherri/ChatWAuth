@@ -80,8 +80,10 @@ export const getUserRooms = async (req, res, next) => {
     next(error);
   }
 };
+
 export const getRoomMessages = async (req, res, next) => {
   const { roomId } = req.params;
+  const CLEANUP_THRESHOLD = 14 * 24 * 60 * 60 * 1000;
 
   try {
     const room = await Room.findOne({
@@ -94,9 +96,11 @@ export const getRoomMessages = async (req, res, next) => {
       throw new CustomError("Room not found or access denied", 404);
     }
 
+    const thresholdDate = new Date(Date.now() - CLEANUP_THRESHOLD);
+
     const messages = await Message.find({
       room: roomId,
-      deletedAt: null,
+      $or: [{ deletedAt: null }, { deletedAt: { $gt: thresholdDate } }],
     })
       .sort({ createdAt: 1 })
       .populate("sender", "firstName lastName email image color");
@@ -109,6 +113,7 @@ export const getRoomMessages = async (req, res, next) => {
     next(error);
   }
 };
+
 export const addUsersToRoom = async (req, res, next) => {
   const { roomId } = req.params;
   const { userIds } = req.body;
