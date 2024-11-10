@@ -116,7 +116,7 @@ export const ChannelMessage = ({
               : "20px 20px 0px 20px",
           }}
         >
-          {message.isPinned && (
+          {message.isPinned && !message.deletedAt && (
             <Pin className="h-3 w-3 absolute -top-1.5 -right-1.5 text-yellow-400 fill-current transform rotate-45" />
           )}
           {message.content}
@@ -128,8 +128,7 @@ export const ChannelMessage = ({
       if (message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i)) {
         return (
           <div className="max-w-[300px] inline-block relative">
-            {" "}
-            {message.isPinned && (
+            {message.isPinned && !message.deletedAt && (
               <Pin className="h-3 w-3 absolute -top-1.5 -right-1.5 text-yellow-400 fill-current transform rotate-45 z-10" />
             )}
             <img
@@ -151,7 +150,7 @@ export const ChannelMessage = ({
               : "bg-[#2a2b33]/5 text-white/80"
           } border rounded p-3 inline-flex items-center gap-2 hover:opacity-80 relative`}
         >
-          {message.isPinned && (
+          {message.isPinned && !message.deletedAt && (
             <Pin className="h-3 w-3 absolute -top-1.5 -right-1.5 text-yellow-400 fill-current transform rotate-45" />
           )}
           <FileIcon size={20} />
@@ -192,7 +191,7 @@ export const ChannelMessage = ({
             {message.deletedBy?.lastName || ""}
           </span>
         )}
-        {message.isPinned && (
+        {message.isPinned && !message.deletedAt && (
           <span className="ml-2 text-yellow-400">
             • Pinned by{" "}
             {message.pinnedBy

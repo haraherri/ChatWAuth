@@ -70,22 +70,43 @@ const setupSocket = (server) => {
         return;
       }
 
+      if (message.isPinned) {
+        // update room's pinned message count
+        await Room.findByIdAndUpdate(message.room, {
+          $inc: { pinnedMessagesCount: -1 },
+        });
+
+        // update message pin status
+        message.isPinned = false;
+        message.pinnedAt = null;
+        message.pinnedBy = null;
+      }
+
       message.deletedAt = new Date();
       message.deletedBy = userId;
       await message.save();
 
       // Populate deletedBy information before emitting
-      const populatedMessage = await Message.findById(messageId).populate(
-        "deletedBy",
-        "firstName lastName"
-      );
+      const populatedMessage = await Message.findById(messageId)
+        .populate("deletedBy", "firstName lastName")
+        .populate("sender", "firstName lastName email image color")
+        .populate("pinnedBy", "firstName lastName");
 
-      // Notify all users in the room about the deleted message
+      // emit two events: messageDeleted and messagePin (if message was pinned)
       io.to(message.room.toString()).emit("messageDeleted", {
         messageId,
         deletedBy: populatedMessage.deletedBy,
         deletedAt: message.deletedAt,
       });
+
+      // if message was pinned, emit unpinned event
+      if (message.isPinned) {
+        io.to(message.room.toString()).emit("messagePin", {
+          messageId,
+          action: "unpinned",
+          message: populatedMessage,
+        });
+      }
     } catch (error) {
       socket.emit("deleteMessageError", {
         error: error.message,
