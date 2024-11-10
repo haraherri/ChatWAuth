@@ -74,10 +74,16 @@ const setupSocket = (server) => {
       message.deletedBy = userId;
       await message.save();
 
+      // Populate deletedBy information before emitting
+      const populatedMessage = await Message.findById(messageId).populate(
+        "deletedBy",
+        "firstName lastName"
+      );
+
       // Notify all users in the room about the deleted message
       io.to(message.room.toString()).emit("messageDeleted", {
         messageId,
-        deletedBy: userId,
+        deletedBy: populatedMessage.deletedBy,
         deletedAt: message.deletedAt,
       });
     } catch (error) {

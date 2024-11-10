@@ -103,7 +103,8 @@ export const getRoomMessages = async (req, res, next) => {
       $or: [{ deletedAt: null }, { deletedAt: { $gt: thresholdDate } }],
     })
       .sort({ createdAt: 1 })
-      .populate("sender", "firstName lastName email image color");
+      .populate("sender", "firstName lastName email image color")
+      .populate("deletedBy", "firstName lastName");
 
     res.json({
       success: true,

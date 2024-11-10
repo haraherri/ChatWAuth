@@ -42,41 +42,60 @@ export const ChannelMessage = ({
     </>
   );
 
-  const renderDropdownMenu = () => (
-    <div
-      className={`${
-        isCurrentUser ? "order-first" : "order-last"
-      } opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center`}
-    >
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="p-1 hover:bg-gray-700/50 rounded">
-            <MoreHorizontal className="h-4 w-4 text-gray-400" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align={isCurrentUser ? "start" : "end"}
-          className="w-40"
-        >
-          <DropdownMenuItem className="gap-2 cursor-pointer">
-            <Pin className="h-4 w-4" />
-            <span>Pin message</span>
-          </DropdownMenuItem>
-          {(userInfo.role === "admin" || userInfo.role === "moderator") && (
-            <DropdownMenuItem
-              className="gap-2 text-red-500 focus:text-red-500 cursor-pointer"
-              onClick={() => onDeleteMessage(message._id)}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Delete message</span>
+  const renderDropdownMenu = () =>
+    !message.deletedAt && (
+      <div
+        className={`${
+          isCurrentUser ? "order-first" : "order-last"
+        } opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center`}
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 hover:bg-gray-700/50 rounded">
+              <MoreHorizontal className="h-4 w-4 text-gray-400" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align={isCurrentUser ? "start" : "end"}
+            className="w-40"
+          >
+            <DropdownMenuItem className="gap-2 cursor-pointer">
+              <Pin className="h-4 w-4" />
+              <span>Pin message</span>
             </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
+            {(userInfo.role === "admin" || userInfo.role === "moderator") && (
+              <DropdownMenuItem
+                className="gap-2 text-red-500 focus:text-red-500 cursor-pointer"
+                onClick={() => onDeleteMessage(message._id)}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete message</span>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
 
   const renderContent = () => {
+    if (message.deletedAt) {
+      return (
+        <div
+          className={`${
+            isCurrentUser
+              ? "bg-[#2a2b33]/5 text-gray-400"
+              : "bg-[#2a2b33]/5 text-gray-400"
+          } border p-4 rounded my-1 break-words flex-grow italic`}
+          style={{
+            borderRadius: !isCurrentUser
+              ? "20px 20px 20px 0px"
+              : "20px 20px 0px 20px",
+          }}
+        >
+          <span>This message was deleted</span>
+        </div>
+      );
+    }
     if (message.messageType === "text") {
       return (
         <div
@@ -91,13 +110,7 @@ export const ChannelMessage = ({
               : "20px 20px 0px 20px",
           }}
         >
-          {message.deletedAt ? (
-            <span className="italic text-gray-400">
-              This message has been deleted.
-            </span>
-          ) : (
-            message.content
-          )}
+          {message.content}
         </div>
       );
     }
@@ -139,9 +152,12 @@ export const ChannelMessage = ({
       );
     }
   };
-
   return (
-    <div className={`mt-5 group ${isCurrentUser ? "text-right" : "text-left"}`}>
+    <div
+      className={`mt-5 ${!message.deletedAt ? "group" : ""} ${
+        isCurrentUser ? "text-right" : "text-left"
+      }`}
+    >
       <div className="flex items-center gap-2 mb-1">
         {!isCurrentUser && renderAvatar()}
       </div>
@@ -153,6 +169,12 @@ export const ChannelMessage = ({
 
       <div className="text-xs text-gray-600">
         {moment(message.createdAt).format("LT")}
+        {message.deletedAt && (
+          <span className="ml-2 text-gray-500">
+            • Deleted by {message.deletedBy?.firstName || "Unknown"}{" "}
+            {message.deletedBy?.lastName || ""}
+          </span>
+        )}
       </div>
     </div>
   );
