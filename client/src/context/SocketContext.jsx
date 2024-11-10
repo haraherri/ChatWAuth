@@ -70,6 +70,20 @@ export const SocketProvider = ({ children }) => {
           deletedBy: data.deletedBy,
         });
       };
+      const handleMessagePin = (data) => {
+        const { updateMessagePinStatus } = useAppStore.getState();
+        updateMessagePinStatus(
+          data.messageId,
+          data.action === "pinned",
+          data.pinnedBy,
+          data.pinnedAt
+        );
+      };
+
+      const handlePinnedMessages = (messages) => {
+        const { setPinnedMessages } = useAppStore.getState();
+        setPinnedMessages(messages);
+      };
       const handleNewRoom = (room) => {
         const { addChannel } = useAppStore.getState();
         addChannel(room);
@@ -124,6 +138,9 @@ export const SocketProvider = ({ children }) => {
       socket.current.on("newMessage", handleNewMessage);
       socket.current.on("messageSent", handleMessageSent);
       socket.current.on("messageDeleted", handleMessageDeleted);
+      socket.current.on("messagePin", handleMessagePin);
+      socket.current.on("pinnedMessages", handlePinnedMessages);
+      socket.current.on("pinMessageError", (error) => toast.error(error.error));
 
       // Room handlers
       socket.current.on("newRoom", handleNewRoom);
@@ -135,6 +152,9 @@ export const SocketProvider = ({ children }) => {
         socket.current.off("newMessage");
         socket.current.off("messageSent");
         socket.current.off("messageDeleted");
+        socket.current.off("messagePin");
+        socket.current.off("pinnedMessages");
+        socket.current.off("pinMessageError");
         socket.current.off("newRoom");
         socket.current.off("userJoinedRoom");
         socket.current.off("userLeftRoom");

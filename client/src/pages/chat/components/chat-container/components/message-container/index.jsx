@@ -23,11 +23,13 @@ const MessageContainer = () => {
     selectedImage,
     setSelectedImage,
     handleDeleteMessage,
+    handlePinMessage,
     handleImageClick,
     handleImageLoad,
     handleImageDownload,
     handleFileDownload,
     fetchMessages,
+    fetchPinnedMessages,
   } = useMessageHandlers(
     setSelectedChatMessages,
     selectedChatType,
@@ -38,6 +40,9 @@ const MessageContainer = () => {
     if (selectedChatData._id) {
       const initMessages = async () => {
         const messageCount = await fetchMessages();
+        if (selectedChatType === "channel") {
+          await fetchPinnedMessages();
+        }
         setTimeout(() => {
           scrollToBottom();
         }, 100);
@@ -80,6 +85,7 @@ const MessageContainer = () => {
               }
               onFileDownload={handleFileDownload}
               onDeleteMessage={handleDeleteMessage}
+              onPinMessage={handlePinMessage}
             />
           )}
         </div>

@@ -23,6 +23,33 @@ export const useMessageHandlers = (
     }
   };
 
+  const handlePinMessage = async (messageId, isPinned) => {
+    try {
+      socket.emit("pinMessage", {
+        messageId,
+        roomId: selectedChatData._id,
+        isPinned,
+      });
+    } catch (error) {
+      toast.error("Failed to pin message");
+    }
+  };
+
+  const fetchPinnedMessages = async () => {
+    try {
+      const response = await apiClient.get(
+        `/api/rooms/${selectedChatData._id}/pinned-messages`,
+        { withCredentials: true }
+      );
+      if (response?.data?.success) {
+        socket.emit("getPinnedMessages", selectedChatData._id);
+      }
+    } catch (error) {
+      if (error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      }
+    }
+  };
   const handleImageClick = (imageUrl) => {
     setSelectedImage(imageUrl);
   };
@@ -106,10 +133,12 @@ export const useMessageHandlers = (
     selectedImage,
     setSelectedImage,
     handleDeleteMessage,
+    handlePinMessage,
     handleImageClick,
     handleImageLoad,
     handleImageDownload,
     handleFileDownload,
     fetchMessages,
+    fetchPinnedMessages,
   };
 };

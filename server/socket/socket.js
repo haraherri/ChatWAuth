@@ -92,6 +92,98 @@ const setupSocket = (server) => {
       });
     }
   };
+  const pinMessage = async (socket, { messageId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message || !message.room) {
+        socket.emit("pinMessageError", {
+          error: "Message not found or not in a room",
+        });
+        return;
+      }
+
+      const userId = socket.handshake.query.userId;
+      const user = await User.findById(userId);
+      const room = await Room.findById(message.room);
+
+      if (!user) {
+        socket.emit("pinMessageError", {
+          error: "User not found",
+        });
+        return;
+      }
+
+      // check user is a member of the room
+      if (!room.members.includes(userId)) {
+        socket.emit("pinMessageError", {
+          error: "You are not a member of this room",
+        });
+        return;
+      }
+
+      // Toggle pin status
+      const newPinStatus = !message.isPinned;
+
+      // if pinning, check if room has reached max pinned messages
+      if (newPinStatus && room.pinnedMessagesCount >= 10) {
+        socket.emit("pinMessageError", {
+          error: "Room has reached maximum number of pinned messages (10)",
+        });
+        return;
+      }
+
+      // update pin status
+      message.isPinned = newPinStatus;
+      message.pinnedAt = newPinStatus ? new Date() : null;
+      message.pinnedBy = newPinStatus ? userId : null;
+      await message.save();
+
+      // Update room's pinned message count
+      room.pinnedMessagesCount += newPinStatus ? 1 : -1;
+      await room.save();
+
+      // Populate pinnedBy information before emitting
+      const populatedMessage = await Message.findById(messageId)
+        .populate("pinnedBy", "id firstName lastName")
+        .populate("sender", "id email firstName lastName image color");
+
+      // Emit message pin event to all users in the room ( action: pinned/unpinned )
+      io.to(message.room.toString()).emit("messagePin", {
+        messageId,
+        action: newPinStatus ? "pinned" : "unpinned",
+        pinnedBy: populatedMessage.pinnedBy,
+        pinnedAt: message.pinnedAt,
+        message: populatedMessage,
+      });
+    } catch (error) {
+      socket.emit("pinMessageError", {
+        error: error.message,
+      });
+    }
+  };
+
+  const getPinnedMessages = async (socket, roomId) => {
+    try {
+      const CLEANUP_THRESHOLD = 14 * 24 * 60 * 60 * 1000;
+      const thresholdDate = new Date(Date.now() - CLEANUP_THRESHOLD);
+
+      const messages = await Message.find({
+        room: roomId,
+        isPinned: true,
+        $or: [{ deletedAt: null }, { deletedAt: { $gt: thresholdDate } }],
+      })
+        .sort({ pinnedAt: -1 })
+        .populate("sender", "firstName lastName email image color")
+        .populate("pinnedBy", "firstName lastName")
+        .populate("deletedBy", "firstName lastName");
+
+      socket.emit("pinnedMessages", messages);
+    } catch (error) {
+      socket.emit("pinnedMessagesError", {
+        error: error.message,
+      });
+    }
+  };
   // Handle joining room
   const joinRoom = async (socket, roomId) => {
     try {
@@ -148,6 +240,10 @@ const setupSocket = (server) => {
 
     socket.on("sendMessage", sendMessage);
     socket.on("deleteMessage", (data) => deleteMessage(socket, data));
+    socket.on("pinMessage", (data) => pinMessage(socket, data));
+    socket.on("getPinnedMessages", (roomId) =>
+      getPinnedMessages(socket, roomId)
+    );
     socket.on("joinRoom", (roomId) => joinRoom(socket, roomId));
     socket.on("leaveRoom", (roomId) => leaveRoom(socket, roomId));
     socket.on("disconnect", () => disconnect(socket));

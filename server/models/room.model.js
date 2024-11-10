@@ -18,11 +18,17 @@ const RoomSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    pinnedMessagesCount: {
+      type: Number,
+      default: 0,
+      max: 10,
+    },
     deletedAt: {
       type: Date,
       default: null,
     },
   },
+
   {
     timestamps: true,
   }

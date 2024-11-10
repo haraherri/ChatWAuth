@@ -4,7 +4,9 @@ export const createChatSlice = (set, get) => ({
   selectedChatMessages: [],
   directMessagesContacts: [],
   channels: [],
+  pinnedMessages: [],
   setChannels: (channels) => set({ channels }),
+  setPinnedMessages: (pinnedMessages) => set({ pinnedMessages }),
   setSelectedChatType: (selectedChatType) => set({ selectedChatType }),
   setSelectedChatData: (selectedChatData) => set({ selectedChatData }),
   setSelectedChatMessages: (selectedChatMessages) =>
@@ -45,6 +47,15 @@ export const createChatSlice = (set, get) => ({
         selectedChatMessages: [],
       });
     }
+  },
+  updateMessagePinStatus: (messageId, isPinned, pinnedBy, pinnedAt) => {
+    const selectedChatMessages = get().selectedChatMessages.map((message) =>
+      message._id === messageId
+        ? { ...message, isPinned, pinnedBy, pinnedAt }
+        : message
+    );
+
+    set({ selectedChatMessages });
   },
   closeChat: () =>
     set({

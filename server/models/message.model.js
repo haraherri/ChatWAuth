@@ -38,6 +38,19 @@ const MessageSchema = new mongoose.Schema(
         return this.messageType === "file";
       },
     },
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
+    pinnedAt: {
+      type: Date,
+      default: null,
+    },
+    pinnedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     deletedAt: {
       type: Date,
       default: null,

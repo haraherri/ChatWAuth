@@ -104,11 +104,49 @@ export const getRoomMessages = async (req, res, next) => {
     })
       .sort({ createdAt: 1 })
       .populate("sender", "firstName lastName email image color")
-      .populate("deletedBy", "firstName lastName");
+      .populate("deletedBy", "firstName lastName")
+      .populate("pinnedBy", "firstName lastName");
 
     res.json({
       success: true,
       messages,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPinnedMessages = async (req, res, next) => {
+  const { roomId } = req.params;
+  const CLEANUP_THRESHOLD = 14 * 24 * 60 * 60 * 1000;
+
+  try {
+    const room = await Room.findOne({
+      _id: roomId,
+      members: req.userId,
+      deletedAt: null,
+    });
+
+    if (!room) {
+      throw new CustomError("Room not found or access denied", 404);
+    }
+
+    const thresholdDate = new Date(Date.now() - CLEANUP_THRESHOLD);
+
+    const pinnedMessages = await Message.find({
+      room: roomId,
+      isPinned: true,
+      $or: [{ deletedAt: null }, { deletedAt: { $gt: thresholdDate } }],
+    })
+      .sort({ pinnedAt: -1 })
+      .populate("sender", "firstName lastName email image color")
+      .populate("pinnedBy", "firstName lastName")
+      .populate("deletedBy", "firstName lastName");
+
+    res.json({
+      success: true,
+      count: pinnedMessages.length,
+      pinnedMessages,
     });
   } catch (error) {
     next(error);

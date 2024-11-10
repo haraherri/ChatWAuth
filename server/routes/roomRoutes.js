@@ -3,6 +3,7 @@ import { checkRole, verifyToken } from "../middlewares/verifyToken.js";
 import {
   addUsersToRoom,
   createRoom,
+  getPinnedMessages,
   getRoomMessages,
   getUserRooms,
   removeUserFromRoom,
@@ -18,6 +19,7 @@ router.post(
 );
 router.get("/me", verifyToken, getUserRooms);
 router.get("/:roomId/messages", verifyToken, getRoomMessages);
+router.get("/:roomId/pinned-messages", verifyToken, getPinnedMessages);
 router.post(
   "/:roomId/members",
   verifyToken,

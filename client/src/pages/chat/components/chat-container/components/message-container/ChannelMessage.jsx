@@ -16,6 +16,7 @@ export const ChannelMessage = ({
   onImageLoad,
   onFileDownload,
   onDeleteMessage,
+  onPinMessage,
 }) => {
   const isCurrentUser = message.sender._id === userInfo.id;
 
@@ -59,9 +60,14 @@ export const ChannelMessage = ({
             align={isCurrentUser ? "start" : "end"}
             className="w-40"
           >
-            <DropdownMenuItem className="gap-2 cursor-pointer">
-              <Pin className="h-4 w-4" />
-              <span>Pin message</span>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => onPinMessage(message._id, !message.isPinned)}
+            >
+              <Pin
+                className={`h-4 w-4 ${message.isPinned ? "fill-current" : ""}`}
+              />
+              <span>{message.isPinned ? "Unpin message" : "Pin message"}</span>
             </DropdownMenuItem>
             {(userInfo.role === "admin" || userInfo.role === "moderator") && (
               <DropdownMenuItem
@@ -103,13 +109,16 @@ export const ChannelMessage = ({
             isCurrentUser
               ? "bg-[#8417ff] text-[#ffffff] border-[#8417ff]/50"
               : "bg-[#2a2b33]/5 text-white/80 border-[#ffffff]/20"
-          } border p-4 rounded my-1 break-words font-bold flex-grow`}
+          } border p-4 rounded my-1 break-words font-bold flex-grow relative`}
           style={{
             borderRadius: !isCurrentUser
               ? "20px 20px 20px 0px"
               : "20px 20px 0px 20px",
           }}
         >
+          {message.isPinned && (
+            <Pin className="h-3 w-3 absolute -top-1.5 -right-1.5 text-yellow-400 fill-current transform rotate-45" />
+          )}
           {message.content}
         </div>
       );
@@ -118,7 +127,11 @@ export const ChannelMessage = ({
     if (message.messageType === "file") {
       if (message.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i)) {
         return (
-          <div className="max-w-[300px] inline-block">
+          <div className="max-w-[300px] inline-block relative">
+            {" "}
+            {message.isPinned && (
+              <Pin className="h-3 w-3 absolute -top-1.5 -right-1.5 text-yellow-400 fill-current transform rotate-45 z-10" />
+            )}
             <img
               src={message.fileUrl}
               alt="Image message"
@@ -136,8 +149,11 @@ export const ChannelMessage = ({
             isCurrentUser
               ? "bg-[#8417ff] text-[#ffffff]"
               : "bg-[#2a2b33]/5 text-white/80"
-          } border rounded p-3 inline-flex items-center gap-2 hover:opacity-80`}
+          } border rounded p-3 inline-flex items-center gap-2 hover:opacity-80 relative`}
         >
+          {message.isPinned && (
+            <Pin className="h-3 w-3 absolute -top-1.5 -right-1.5 text-yellow-400 fill-current transform rotate-45" />
+          )}
           <FileIcon size={20} />
           <div className="flex flex-col">
             <span className="text-sm">{message.fileUrl.split("/").pop()}</span>
@@ -152,6 +168,7 @@ export const ChannelMessage = ({
       );
     }
   };
+
   return (
     <div
       className={`mt-5 ${!message.deletedAt ? "group" : ""} ${
@@ -173,6 +190,14 @@ export const ChannelMessage = ({
           <span className="ml-2 text-gray-500">
             • Deleted by {message.deletedBy?.firstName || "Unknown"}{" "}
             {message.deletedBy?.lastName || ""}
+          </span>
+        )}
+        {message.isPinned && (
+          <span className="ml-2 text-yellow-400">
+            • Pinned by{" "}
+            {message.pinnedBy
+              ? `${message.pinnedBy?.firstName} ${message.pinnedBy?.lastName}`
+              : "Unknown"}
           </span>
         )}
       </div>
