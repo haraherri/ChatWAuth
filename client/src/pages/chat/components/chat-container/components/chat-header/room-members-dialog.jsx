@@ -141,7 +141,6 @@ const RoomMembersDialog = () => {
         <DialogTrigger asChild>
           <button className="text-neutral-500 hover:text-white focus:outline-none duration-300 transition-all flex items-center gap-2">
             <Users className="h-5 w-5" />
-            <span>Members</span>
           </button>
         </DialogTrigger>
       )}

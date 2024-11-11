@@ -4,6 +4,7 @@ import { useAppStore } from "@/store";
 import React from "react";
 import { RiCloseFill } from "react-icons/ri";
 import RoomMembersDialog from "./room-members-dialog";
+import PinnedMessagesDialog from "./pinned-messages-dialog";
 
 const ChatHeader = () => {
   const { closeChat, selectedChatData, selectedChatType } = useAppStore();
@@ -46,7 +47,12 @@ const ChatHeader = () => {
           </div>
         </div>
         <div className="flex items-center justify-center gap-5">
-          {selectedChatType === "channel" && <RoomMembersDialog />}
+          {selectedChatType === "channel" && (
+            <>
+              <PinnedMessagesDialog />
+              <RoomMembersDialog />
+            </>
+          )}
           <button className="text-neutral-500 focus:border-none focus:outline-none focus:text-white duration-300 transition-all">
             <RiCloseFill className="text-3xl" onClick={closeChat} />
           </button>
