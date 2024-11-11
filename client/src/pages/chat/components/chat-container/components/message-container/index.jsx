@@ -59,7 +59,7 @@ const MessageContainer = () => {
       lastDate = messageDate;
 
       return (
-        <div key={`${message._id}-${index}`}>
+        <div key={`${message._id}-${index}`} id={`message-${message._id}`}>
           {showDate && (
             <div className="text-center text-gray-500 my-2">
               {moment(message.createdAt).format("LL")}

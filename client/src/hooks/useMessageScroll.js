@@ -1,5 +1,5 @@
 import { useAppStore } from "@/store";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export const useMessageScroll = (messages) => {
   const containerRef = useRef(null);
@@ -7,10 +7,14 @@ export const useMessageScroll = (messages) => {
   const { userInfo } = useAppStore();
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const scrollToBottom = (behavior = "auto") => {
     if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      const container = containerRef.current;
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
     }
   };
 
@@ -22,6 +26,46 @@ export const useMessageScroll = (messages) => {
     }
   };
 
+  // Handle initial load
+  useLayoutEffect(() => {
+    if (messages.length > 0 && isInitialLoad) {
+      scrollToBottom();
+      setIsInitialLoad(false);
+    }
+  }, [messages, isInitialLoad]);
+
+  // Handle new messages
+  useEffect(() => {
+    if (!isInitialLoad && messages.length > previousMessageCount) {
+      const latestMessage = messages[messages.length - 1];
+      const isCurrentUserMessage = latestMessage?.sender === userInfo?.id;
+
+      if (
+        latestMessage?.messageType === "file" &&
+        latestMessage?.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i)
+      ) {
+        const img = new Image();
+        img.onload = () => {
+          if (isCurrentUserMessage || shouldAutoScroll) {
+            scrollToBottom("smooth");
+          }
+        };
+        img.src = latestMessage.fileUrl;
+      } else {
+        if (isCurrentUserMessage || shouldAutoScroll) {
+          scrollToBottom("smooth");
+        }
+      }
+    }
+    setPreviousMessageCount(messages.length);
+  }, [messages, userInfo?.id, shouldAutoScroll, isInitialLoad]);
+
+  // Reset initial load state when changing chats
+  useEffect(() => {
+    setIsInitialLoad(true);
+    setPreviousMessageCount(0);
+  }, [messages[0]?._id]); // Reset when first message changes (indicates chat change)
+
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -29,17 +73,6 @@ export const useMessageScroll = (messages) => {
       return () => container.removeEventListener("scroll", handleScroll);
     }
   }, []);
-
-  useEffect(() => {
-    if (messages.length > previousMessageCount) {
-      const latestMessage = messages[messages.length - 1];
-      const isCurrentUserMessage = latestMessage?.sender === userInfo?.id;
-      if (isCurrentUserMessage || shouldAutoScroll) {
-        scrollToBottom("smooth");
-      }
-    }
-    setPreviousMessageCount(messages.length);
-  }, [messages]);
 
   return {
     containerRef,

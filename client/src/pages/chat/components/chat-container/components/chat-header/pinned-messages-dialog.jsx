@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,22 +18,33 @@ const PinnedMessagesDialog = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const socket = useSocket();
-  const { selectedChatData, userInfo, pinnedMessages, setPinnedMessages } =
-    useAppStore();
+  const {
+    selectedChatData,
+    userInfo,
+    pinnedMessages,
+    setPinnedMessages,
+    updateMessage,
+  } = useAppStore();
 
-  const handleScrollToMessage = (messageId) => {
-    const messageElement = document.getElementById(`message-${messageId}`);
-    if (messageElement) {
-      messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
-      messageElement.classList.add("bg-white/5");
-      setTimeout(() => {
-        messageElement.classList.remove("bg-white/5");
-      }, 2000);
-    }
+  const handleScrollToMessage = useCallback((messageId) => {
     setOpen(false);
-  };
 
-  const fetchPinnedMessages = async () => {
+    // Đợi dialog đóng và animation hoàn tất
+    setTimeout(() => {
+      const messageElement = document.getElementById(`message-${messageId}`);
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        messageElement.classList.add("bg-white/5");
+        setTimeout(() => {
+          messageElement.classList.remove("bg-white/5");
+        }, 2000);
+      }
+    }, 300); // Adjust timing based on your dialog close animation duration
+  }, []);
+
+  const fetchPinnedMessages = useCallback(async () => {
+    if (!selectedChatData?._id) return;
+
     try {
       setIsLoading(true);
       const response = await apiClient.get(
@@ -42,37 +53,42 @@ const PinnedMessagesDialog = () => {
       );
       if (response?.data?.success) {
         setPinnedMessages(response.data.pinnedMessages);
-        console.log(response.data.pinnedMessages);
       }
     } catch (error) {
       console.error("Failed to fetch pinned messages:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedChatData, setPinnedMessages]);
 
   useEffect(() => {
-    if (socket) {
-      socket.on("pinnedMessages", (messages) => {
-        setPinnedMessages(messages);
-      });
-
-      socket.on("messagePin", (data) => {
-        // Thay vì gọi fetchPinnedMessages()
-        const { messageId, action, pinnedBy, pinnedAt } = data;
-        const isPinned = action === "pinned";
-
-        // Update message trong store
-        const { updateMessage } = useAppStore.getState();
-        updateMessage(messageId, { isPinned, pinnedBy, pinnedAt });
-      });
-
-      return () => {
-        socket.off("pinnedMessages");
-        socket.off("messagePin");
-      };
+    if (open) {
+      fetchPinnedMessages();
     }
-  }, [socket, selectedChatData]);
+  }, [open, fetchPinnedMessages]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handlePinnedMessages = (messages) => {
+      setPinnedMessages(messages);
+    };
+
+    const handleMessagePin = (data) => {
+      const { messageId, action, pinnedBy, pinnedAt } = data;
+      const isPinned = action === "pinned";
+      updateMessage(messageId, { isPinned, pinnedBy, pinnedAt });
+      fetchPinnedMessages(); // Refresh pinned messages list
+    };
+
+    socket.on("pinnedMessages", handlePinnedMessages);
+    socket.on("messagePin", handleMessagePin);
+
+    return () => {
+      socket.off("pinnedMessages", handlePinnedMessages);
+      socket.off("messagePin", handleMessagePin);
+    };
+  }, [socket, setPinnedMessages, updateMessage, fetchPinnedMessages]);
 
   const handlePinMessage = async (messageId, isPinned) => {
     try {
