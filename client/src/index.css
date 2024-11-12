@@ -72,3 +72,15 @@
   font-weight: 500;
   font-style: normal;
 }
+@keyframes highlightFade {
+  0% {
+    background-color: rgba(132, 23, 255, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.highlight-message {
+  animation: highlightFade 2s ease-out;
+}

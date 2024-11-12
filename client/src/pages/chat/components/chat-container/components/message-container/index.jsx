@@ -14,6 +14,8 @@ const MessageContainer = () => {
     userInfo,
     selectedChatMessages,
     setSelectedChatMessages,
+    highlightedMessageId,
+    setHighlightedMessageId,
   } = useAppStore();
 
   const { containerRef, scrollRef, scrollToBottom, shouldAutoScroll } =
@@ -35,6 +37,32 @@ const MessageContainer = () => {
     selectedChatType,
     selectedChatData
   );
+
+  useEffect(() => {
+    if (highlightedMessageId) {
+      requestAnimationFrame(() => {
+        const messageElement = document.getElementById(
+          `message-${highlightedMessageId}`
+        );
+        if (messageElement && containerRef.current) {
+          const container = containerRef.current;
+          const elementRect = messageElement.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const scrollTop =
+            container.scrollTop +
+            elementRect.top -
+            containerRect.top -
+            (containerRect.height - elementRect.height) / 2;
+          container.scrollTop = scrollTop;
+          messageElement.classList.add("highlight-message");
+          setTimeout(() => {
+            messageElement.classList.remove("highlight-message");
+            setHighlightedMessageId(null);
+          }, 2000);
+        }
+      });
+    }
+  }, [highlightedMessageId, containerRef]);
 
   useEffect(() => {
     if (selectedChatData._id) {

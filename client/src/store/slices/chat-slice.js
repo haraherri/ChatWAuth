@@ -5,6 +5,9 @@ export const createChatSlice = (set, get) => ({
   directMessagesContacts: [],
   channels: [],
   pinnedMessages: [],
+  highlightedMessageId: null,
+  setHighlightedMessageId: (messageId) =>
+    set({ highlightedMessageId: messageId }),
   setChannels: (channels) => set({ channels }),
   setPinnedMessages: (pinnedMessages) => set({ pinnedMessages }),
   setSelectedChatType: (selectedChatType) => set({ selectedChatType }),
