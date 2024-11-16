@@ -15,7 +15,7 @@ import { getColor } from "@/lib/utils";
 import { useAppStore } from "@/store";
 import { SEARCH_CONTACTS_ROUTES } from "@/utils/constants";
 import { Loader2, Users, UserX } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FaSpinner } from "react-icons/fa";
 import { toast } from "sonner";
 
@@ -30,6 +30,32 @@ const RoomMembersDialog = () => {
   const canManageRoom = useMemo(() => {
     return ["admin", "moderator"].includes(userInfo?.role);
   }, [userInfo?.role]);
+
+  const canRemoveMember = useCallback(
+    (member) => {
+      if (!canManageRoom) return false;
+
+      if (member._id === selectedChatData.creator._id) return false;
+
+      if (userInfo?.role === "admin") return true;
+
+      if (userInfo?.role === "moderator") {
+        if (member.role === "admin") return false;
+
+        if (selectedChatData.creator._id === userInfo?.id) {
+          return true;
+        }
+        if (member.role === "moderator" || member._id === userInfo?.id) {
+          return false;
+        }
+
+        return true;
+      }
+
+      return false;
+    },
+    [canManageRoom, selectedChatData.creator._id, userInfo]
+  );
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -75,11 +101,6 @@ const RoomMembersDialog = () => {
   };
 
   const handleRemoveMember = async (userId) => {
-    if (userId === userInfo?._id && userInfo?.role === "moderator") {
-      toast.error("Moderators cannot remove themselves from the room");
-      return;
-    }
-
     try {
       setIsLoading(true);
       const response = await apiClient.delete(
@@ -163,13 +184,6 @@ const RoomMembersDialog = () => {
               {selectedChatData.members.map((member) => {
                 const isCurrentUser = member._id === userInfo?.id;
                 const isCreator = member._id === selectedChatData.creator._id;
-                const canRemoveMember =
-                  canManageRoom &&
-                  !isCreator &&
-                  !(
-                    userInfo?.role === "moderator" &&
-                    member.role === "moderator"
-                  );
 
                 return (
                   <div
@@ -220,7 +234,7 @@ const RoomMembersDialog = () => {
                         </div>
                       </div>
                     </div>
-                    {canRemoveMember && (
+                    {canRemoveMember(member) && (
                       <Button
                         variant="destructive"
                         size="sm"

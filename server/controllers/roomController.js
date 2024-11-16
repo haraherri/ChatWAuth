@@ -156,6 +156,8 @@ export const getPinnedMessages = async (req, res, next) => {
 export const addUsersToRoom = async (req, res, next) => {
   const { roomId } = req.params;
   const { userIds } = req.body;
+  const currentUserId = req.userId;
+  const currentUserRole = req.userRole;
 
   try {
     const room = await Room.findOne({
@@ -170,6 +172,42 @@ export const addUsersToRoom = async (req, res, next) => {
     if (!Array.isArray(userIds) || userIds.length === 0) {
       throw new CustomError("User IDs are required", 400);
     }
+
+    // Get all users to be added
+    const usersToAdd = await User.find({
+      _id: { $in: userIds },
+      deletedAt: null,
+    });
+
+    if (usersToAdd.length !== userIds.length) {
+      throw new CustomError("Some users do not exist", 400);
+    }
+
+    // Permission checks for moderator
+    if (currentUserRole === "moderator") {
+      // Check if trying to add admin
+      const hasAdmin = usersToAdd.some((user) => user.role === "admin");
+      if (hasAdmin) {
+        throw new CustomError(
+          "Moderators cannot add admin users to rooms",
+          403
+        );
+      }
+
+      // If not room creator, check if trying to add moderator
+      if (room.creator.toString() !== currentUserId) {
+        const hasModerator = usersToAdd.some(
+          (user) => user.role === "moderator"
+        );
+        if (hasModerator) {
+          throw new CustomError(
+            "Only room creator can add other moderators",
+            403
+          );
+        }
+      }
+    }
+
     const existingMembers = new Set(room.members.map((m) => m.toString()));
     const newUserIds = userIds.filter(
       (id) => !existingMembers.has(id.toString())
@@ -179,19 +217,10 @@ export const addUsersToRoom = async (req, res, next) => {
       throw new CustomError("All users are already members", 400);
     }
 
-    const users = await User.find({
-      _id: { $in: userIds },
-      deletedAt: null,
-    });
-
-    if (users.length !== userIds.length) {
-      throw new CustomError("Some users do not exist", 400);
-    }
-
     const updatedRoom = await Room.findByIdAndUpdate(
       roomId,
       {
-        $addToSet: { members: { $each: userIds } },
+        $addToSet: { members: { $each: newUserIds } },
       },
       {
         new: true,
@@ -203,23 +232,23 @@ export const addUsersToRoom = async (req, res, next) => {
 
     const io = req.app.get("io");
     if (io) {
-      users.forEach((user) => {
+      usersToAdd.forEach((user) => {
         const socketId = userSocketMap.get(user._id.toString());
         if (socketId) {
           io.sockets.sockets.get(socketId)?.join(roomId);
         }
       });
-      if (io) {
-        io.to(roomId).emit("userJoinedRoom", {
-          room: updatedRoom,
-        });
-        users.forEach((user) => {
-          const socketId = userSocketMap.get(user._id.toString());
-          if (socketId) {
-            io.to(socketId).emit("newRoom", updatedRoom); // Emit event newRoom
-          }
-        });
-      }
+
+      io.to(roomId).emit("userJoinedRoom", {
+        room: updatedRoom,
+      });
+
+      usersToAdd.forEach((user) => {
+        const socketId = userSocketMap.get(user._id.toString());
+        if (socketId) {
+          io.to(socketId).emit("newRoom", updatedRoom);
+        }
+      });
     }
 
     res.status(200).json({
@@ -255,17 +284,32 @@ export const removeUserFromRoom = async (req, res, next) => {
       throw new CustomError("Cannot remove room creator", 400);
     }
 
-    if (currentUserId === userId && currentUserRole === "moderator") {
-      throw new CustomError(
-        "Moderators cannot remove themselves from room",
-        400
-      );
+    // Get user being removed
+    const userToRemove = await User.findById(userId);
+    if (!userToRemove) {
+      throw new CustomError("User not found", 404);
     }
 
+    // Permission checks
     if (currentUserRole === "moderator") {
-      const userToRemove = await User.findById(userId);
+      // Moderator cannot remove admin
       if (userToRemove.role === "admin") {
         throw new CustomError("Moderators cannot remove admins from room", 403);
+      }
+
+      // If current user is moderator but not creator
+      if (room.creator.toString() !== currentUserId) {
+        // Cannot remove other moderators
+        if (userToRemove.role === "moderator") {
+          throw new CustomError("Only room creator can remove moderators", 403);
+        }
+        // Cannot remove themselves
+        if (currentUserId === userId) {
+          throw new CustomError(
+            "Moderators cannot remove themselves from room",
+            400
+          );
+        }
       }
     }
 

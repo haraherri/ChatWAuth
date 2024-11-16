@@ -15,24 +15,41 @@ const setupSocket = (server) => {
 
   const sendMessage = async (message) => {
     try {
+      // Add validation for room messages
+      if (message.room) {
+        const room = await Room.findById(message.room);
+        if (!room) {
+          throw new Error("Room not found");
+        }
+
+        // Check if sender is member of room
+        if (!room.members.includes(message.sender)) {
+          const senderSocketId = userSocketMap.get(message.sender);
+          if (senderSocketId) {
+            io.to(senderSocketId).emit("messageSent", {
+              status: "error",
+              error: "You are not authorized to send messages in this room",
+            });
+          }
+          return;
+        }
+      }
+
       const createdMessage = await Message.create(message);
       const messageData = await Message.findById(createdMessage._id)
         .populate("sender", "id email firstName lastName image color")
         .populate("recipient", "id email firstName lastName image color");
 
-      // Handle private message
+      // Rest of existing send message logic
       if (message.recipient) {
         const recipientSocketId = userSocketMap.get(message.recipient);
         if (recipientSocketId) {
           io.to(recipientSocketId).emit("newMessage", messageData);
         }
-      }
-      // Handle room message
-      else if (message.room) {
+      } else if (message.room) {
         io.to(message.room).emit("newMessage", messageData);
       }
 
-      // Notify sender in both cases
       const senderSocketId = userSocketMap.get(message.sender);
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageSent", {

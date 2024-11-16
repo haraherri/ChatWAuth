@@ -94,4 +94,14 @@ export const createChatSlice = (set, get) => ({
 
     set({ selectedChatMessages });
   },
+  resetChat: () =>
+    set({
+      selectedChatType: undefined,
+      selectedChatData: undefined,
+      selectedChatMessages: [],
+      directMessagesContacts: [],
+      channels: [],
+      pinnedMessages: [],
+      highlightedMessageId: null,
+    }),
 });

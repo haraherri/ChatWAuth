@@ -8,6 +8,9 @@ import {
   transporter,
 } from "../config/email.config.js";
 import crypto from "crypto";
+import Room from "../models/room.model.js";
+import Message from "../models/message.model.js";
+import { userSocketMap } from "../socket/socket.js";
 
 const generateToken = (email, userId, role) => {
   return jwt.sign({ email, userId, role }, process.env.JWT_SECRET_KEY, {
@@ -385,6 +388,175 @@ export const adminResetUserPassword = async (req, res, next) => {
       message: "Password reset instructions sent to user's email",
     });
   } catch (error) {
+    next(error);
+  }
+};
+export const getRooms = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const rooms = await Room.find({ deletedAt: null })
+      .populate({
+        path: "creator",
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "members",
+        select: "firstName lastName email",
+      })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await Room.countDocuments({ deletedAt: null });
+
+    return res.status(200).json({
+      message: "Rooms retrieved successfully",
+      data: {
+        rooms,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRoom = async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+
+    const room = await Room.findOne({
+      _id: roomId,
+      deletedAt: null,
+    }).populate([
+      {
+        path: "creator",
+        select: "firstName lastName email",
+      },
+      {
+        path: "members",
+        select: "firstName lastName email",
+      },
+    ]);
+
+    if (!room) {
+      throw new CustomError("Room not found", 404);
+    }
+
+    const pinnedMessages = await Message.find({
+      room: roomId,
+      isPinned: true,
+      deletedAt: null,
+    })
+      .populate({
+        path: "sender",
+        select: "firstName lastName email",
+      })
+      .sort({ pinnedAt: -1 });
+
+    return res.status(200).json({
+      message: "Room retrieved successfully",
+      data: {
+        room,
+        pinnedMessages,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const adminCreateRoom = async (req, res, next) => {
+  const { name, memberIds } = req.body;
+
+  try {
+    // Validate room name
+    if (!name || name.trim().length === 0) {
+      throw new CustomError("Room name is required", 400);
+    }
+
+    // Validate admin creating room
+    const adminUser = await User.findOne({
+      _id: req.userId,
+      role: "admin",
+      deletedAt: null,
+    });
+
+    if (!adminUser) {
+      throw new CustomError(
+        "Only admin can create rooms from admin panel",
+        403
+      );
+    }
+
+    // Validate và lọc memberIds
+    const uniqueMemberIds = memberIds ? [...new Set(memberIds)] : [];
+
+    // Kiểm tra users tồn tại và chưa bị xóa
+    if (uniqueMemberIds.length > 0) {
+      const existingUsers = await User.find({
+        _id: { $in: uniqueMemberIds },
+        deletedAt: null,
+      }).select("role");
+
+      if (existingUsers.length !== uniqueMemberIds.length) {
+        throw new CustomError("Some users do not exist", 400);
+      }
+
+      // Kiểm tra không cho phép thêm admin vào members
+      const hasAdmin = existingUsers.some((user) => user.role === "admin");
+      if (hasAdmin) {
+        throw new CustomError("Cannot add admin users as members", 400);
+      }
+    }
+
+    // Tạo room mới, creator là admin nhưng không thêm vào members
+    const newRoom = await Room.create({
+      name: name.trim(),
+      creator: req.userId, // Admin là creator
+      members: uniqueMemberIds,
+    });
+
+    // Populate thông tin cần thiết
+    const populatedRoom = await Room.findById(newRoom._id)
+      .populate("creator", "id email firstName lastName role")
+      .populate("members", "id email firstName lastName role");
+
+    // Xử lý realtime notification cho members
+    const io = req.app.get("io");
+    if (io) {
+      const roomId = populatedRoom._id.toString();
+
+      // Lấy socket IDs của các members
+      const memberSocketIds = populatedRoom.members
+        .map((member) => userSocketMap.get(member._id.toString()))
+        .filter((socketId) => socketId);
+
+      // Join room và emit event cho members
+      memberSocketIds.forEach((socketId) => {
+        io.sockets.sockets.get(socketId)?.join(roomId);
+      });
+
+      // Thông báo cho tất cả members về room mới
+      io.to(roomId).emit("newRoom", populatedRoom);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Room created successfully",
+      room: populatedRoom,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      throw new CustomError("Room name already exists", 400);
+    }
     next(error);
   }
 };

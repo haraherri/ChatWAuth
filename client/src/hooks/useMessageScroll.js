@@ -12,9 +12,10 @@ export const useMessageScroll = (messages) => {
   const scrollToBottom = (behavior = "auto") => {
     if (containerRef.current) {
       const container = containerRef.current;
-      requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+      setTimeout(() => {
         container.scrollTop = container.scrollHeight;
-      });
+      }, 100);
     }
   };
 
@@ -26,45 +27,41 @@ export const useMessageScroll = (messages) => {
     }
   };
 
-  // Handle initial load
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (messages.length > 0 && isInitialLoad) {
       scrollToBottom();
-      setIsInitialLoad(false);
+      const timer = setTimeout(() => {
+        scrollToBottom();
+        setIsInitialLoad(false);
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [messages, isInitialLoad]);
 
-  // Handle new messages
   useEffect(() => {
     if (!isInitialLoad && messages.length > previousMessageCount) {
       const latestMessage = messages[messages.length - 1];
       const isCurrentUserMessage = latestMessage?.sender === userInfo?.id;
 
-      if (
-        latestMessage?.messageType === "file" &&
-        latestMessage?.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i)
-      ) {
-        const img = new Image();
-        img.onload = () => {
-          if (isCurrentUserMessage || shouldAutoScroll) {
+      if (isCurrentUserMessage || shouldAutoScroll) {
+        scrollToBottom("smooth");
+        if (
+          latestMessage?.messageType === "file" &&
+          latestMessage?.fileUrl?.match(/\.(jpg|jpeg|png|gif)$/i)
+        ) {
+          setTimeout(() => {
             scrollToBottom("smooth");
-          }
-        };
-        img.src = latestMessage.fileUrl;
-      } else {
-        if (isCurrentUserMessage || shouldAutoScroll) {
-          scrollToBottom("smooth");
+          }, 200);
         }
       }
     }
     setPreviousMessageCount(messages.length);
   }, [messages, userInfo?.id, shouldAutoScroll, isInitialLoad]);
 
-  // Reset initial load state when changing chats
   useEffect(() => {
     setIsInitialLoad(true);
     setPreviousMessageCount(0);
-  }, [messages[0]?._id]); // Reset when first message changes (indicates chat change)
+  }, [messages[0]?._id]);
 
   useEffect(() => {
     const container = containerRef.current;

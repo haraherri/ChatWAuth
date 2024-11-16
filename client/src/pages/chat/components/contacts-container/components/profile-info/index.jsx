@@ -18,6 +18,8 @@ import { toast } from "sonner";
 const ProfileInfo = () => {
   const navigate = useNavigate();
   const { userInfo, setUserInfo } = useAppStore();
+  const resetChat = useAppStore((state) => state.resetChat); // Add this
+
   const logOut = async () => {
     try {
       const response = await apiClient.post(
@@ -26,8 +28,9 @@ const ProfileInfo = () => {
         { withCredentials: true }
       );
       if (response.status === 200) {
-        navigate("/auth");
+        resetChat(); // Clear chat state before navigation
         setUserInfo(null);
+        navigate("/auth");
       }
     } catch (error) {
       if (error.response?.data?.error) {
