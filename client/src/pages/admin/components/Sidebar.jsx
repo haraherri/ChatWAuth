@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Users, Lock } from "lucide-react";
+import { Users, Lock, MessageCircle } from "lucide-react";
 
 const SidebarLink = ({ to, icon: Icon, children }) => (
   <NavLink
@@ -25,6 +25,9 @@ const Sidebar = () => {
       <nav className="space-y-2 px-3">
         <SidebarLink to="/admin/users" icon={Users}>
           Users
+        </SidebarLink>
+        <SidebarLink to="/admin/rooms" icon={MessageCircle}>
+          Rooms
         </SidebarLink>
         <SidebarLink to="/admin/change-password" icon={Lock}>
           Change Password

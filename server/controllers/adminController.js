@@ -473,6 +473,7 @@ export const getRoom = async (req, res, next) => {
     next(error);
   }
 };
+
 export const adminCreateRoom = async (req, res, next) => {
   const { name, memberIds } = req.body;
 
@@ -526,8 +527,8 @@ export const adminCreateRoom = async (req, res, next) => {
 
     // Populate thông tin cần thiết
     const populatedRoom = await Room.findById(newRoom._id)
-      .populate("creator", "id email firstName lastName role")
-      .populate("members", "id email firstName lastName role");
+      .populate("creator", "id email firstName lastName image color role")
+      .populate("members", "id email firstName lastName image color role");
 
     // Xử lý realtime notification cho members
     const io = req.app.get("io");
@@ -552,6 +553,114 @@ export const adminCreateRoom = async (req, res, next) => {
       success: true,
       message: "Room created successfully",
       room: populatedRoom,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      throw new CustomError("Room name already exists", 400);
+    }
+    next(error);
+  }
+};
+export const updateRoom = async (req, res, next) => {
+  const { roomId } = req.params;
+  const { name, addMembers, removeMembers } = req.body;
+
+  try {
+    // Validate room exists and not deleted
+    const room = await Room.findOne({
+      _id: roomId,
+      deletedAt: null,
+    });
+
+    if (!room) {
+      throw new CustomError("Room not found", 404);
+    }
+
+    // Prepare update object
+    const updates = {};
+
+    // Update name if provided
+    if (name && name.trim()) {
+      updates.name = name.trim();
+    }
+
+    // Handle members updates if provided
+    if (addMembers?.length || removeMembers?.length) {
+      // Get unique IDs
+      const uniqueAddMembers = addMembers ? [...new Set(addMembers)] : [];
+      const uniqueRemoveMembers = removeMembers
+        ? [...new Set(removeMembers)]
+        : [];
+
+      // Validate new members exist and are not admins
+      if (uniqueAddMembers.length) {
+        const newUsers = await User.find({
+          _id: { $in: uniqueAddMembers },
+          deletedAt: null,
+        }).select("role");
+
+        if (newUsers.length !== uniqueAddMembers.length) {
+          throw new CustomError("Some users to add do not exist", 400);
+        }
+
+        if (newUsers.some((user) => user.role === "admin")) {
+          throw new CustomError("Cannot add admin users as members", 400);
+        }
+      }
+
+      // Update members array
+      const currentMembers = new Set(room.members.map((id) => id.toString()));
+
+      // Remove members
+      uniqueRemoveMembers.forEach((id) => currentMembers.delete(id));
+
+      // Add new members
+      uniqueAddMembers.forEach((id) => currentMembers.add(id));
+
+      updates.members = Array.from(currentMembers);
+    }
+
+    // Update room
+    const updatedRoom = await Room.findByIdAndUpdate(roomId, updates, {
+      new: true,
+    })
+      .populate("members", "id email firstName lastName image color role")
+      .populate("creator", "id email firstName lastName image color role");
+
+    // Handle realtime updates
+    const io = req.app.get("io");
+    if (io) {
+      const roomIdStr = roomId.toString();
+
+      // Emit room update to current members
+      io.to(roomIdStr).emit("roomUpdated", updatedRoom);
+
+      // Handle socket room join/leave for added/removed members
+      if (addMembers?.length) {
+        addMembers.forEach((memberId) => {
+          const socketId = userSocketMap.get(memberId);
+          if (socketId) {
+            io.sockets.sockets.get(socketId)?.join(roomIdStr);
+            io.to(socketId).emit("addedToRoom", updatedRoom);
+          }
+        });
+      }
+
+      if (removeMembers?.length) {
+        removeMembers.forEach((memberId) => {
+          const socketId = userSocketMap.get(memberId);
+          if (socketId) {
+            io.sockets.sockets.get(socketId)?.leave(roomIdStr);
+            io.to(socketId).emit("removedFromRoom", roomIdStr);
+          }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Room updated successfully",
+      room: updatedRoom,
     });
   } catch (error) {
     if (error.code === 11000) {

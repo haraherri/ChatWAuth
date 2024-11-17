@@ -106,6 +106,25 @@ export const SocketProvider = ({ children }) => {
         toast.success(`New members joined the room`);
       };
 
+      const handleRoomUpdated = (updatedRoom) => {
+        const { updateChannel } = useAppStore.getState();
+        updateChannel(updatedRoom);
+        toast.success("Room has been updated");
+      };
+
+      const handleAddedToRoom = (room) => {
+        const { addChannel } = useAppStore.getState();
+        addChannel(room);
+        toast.success("You have been added to a new room");
+      };
+
+      const handleRemovedFromRoom = (roomId) => {
+        const { removeChannel } = useAppStore.getState();
+        socket.current.emit("leave_room", roomId);
+        removeChannel(roomId);
+        toast.info("You have been removed from the room");
+      };
+
       const handleUserLeftRoom = (data) => {
         const { updateChannel, removeChannel } = useAppStore.getState();
 
@@ -141,6 +160,9 @@ export const SocketProvider = ({ children }) => {
       socket.current.on("messagePin", handleMessagePin);
       socket.current.on("pinnedMessages", handlePinnedMessages);
       socket.current.on("pinMessageError", (error) => toast.error(error.error));
+      socket.current.on("roomUpdated", handleRoomUpdated);
+      socket.current.on("addedToRoom", handleAddedToRoom);
+      socket.current.on("removedFromRoom", handleRemovedFromRoom);
 
       // Room handlers
       socket.current.on("newRoom", handleNewRoom);
@@ -159,6 +181,9 @@ export const SocketProvider = ({ children }) => {
         socket.current.off("userJoinedRoom");
         socket.current.off("userLeftRoom");
         socket.current.off("roomError");
+        socket.current.off("roomUpdated");
+        socket.current.off("addedToRoom");
+        socket.current.off("removedFromRoom");
         socket.current.disconnect();
       };
     }

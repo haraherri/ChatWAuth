@@ -15,6 +15,7 @@ import {
   getUser,
   getUsers,
   restoreUser,
+  updateRoom,
   updateUser,
 } from "../controllers/adminController.js";
 import { checkRole, verifyToken } from "../middlewares/verifyToken.js";
@@ -65,7 +66,7 @@ router.get("/rooms", verifyToken, checkRole("admin"), getRooms);
 router.get("/rooms/deleted", verifyToken, checkRole("admin"));
 router.get("/rooms/:roomId", verifyToken, checkRole("admin"), getRoom);
 router.post("/rooms", verifyToken, checkRole("admin"), adminCreateRoom);
-router.put("/rooms/:roomId", verifyToken, checkRole("admin"));
+router.put("/rooms/:roomId", verifyToken, checkRole("admin"), updateRoom);
 router.patch("/rooms/:roomId/status", verifyToken, checkRole("admin")); // soft delete
 router.post("/rooms/:roomId/restore", verifyToken, checkRole("admin"));
 export default router;

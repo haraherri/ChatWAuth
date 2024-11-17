@@ -17,6 +17,8 @@ import AdminChangePassword from "./pages/admin/auth/change-password";
 import UserList from "./pages/admin/users/components/UserList";
 import AdminLayout from "./pages/admin/components/Layout";
 import UserForm from "./pages/admin/users/components/UserForm";
+import RoomList from "./pages/admin/rooms/components/RoomList";
+import RoomForm from "./pages/admin/rooms/components/RoomForm";
 
 const PrivateRoute = ({ children }) => {
   const { userInfo } = useAppStore();
@@ -167,6 +169,10 @@ const App = () => {
           <Route path="users/add" element={<UserForm />} />
           <Route path="users/edit/:_id" element={<UserForm />} />
           <Route path="change-password" element={<AdminChangePassword />} />
+
+          <Route path="rooms" element={<RoomList />} />
+          <Route path="rooms/add" element={<RoomForm />} />
+          <Route path="rooms/edit/:roomId" element={<RoomForm />} />
         </Route>
 
         {/* Protected User Routes */}
