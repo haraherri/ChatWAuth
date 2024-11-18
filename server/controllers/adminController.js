@@ -669,3 +669,130 @@ export const updateRoom = async (req, res, next) => {
     next(error);
   }
 };
+export const adminDeleteRoom = async (req, res, next) => {
+  const { roomId } = req.params;
+
+  try {
+    // Check room exists and not already deleted
+    const room = await Room.findOne({
+      _id: roomId,
+      deletedAt: null,
+    });
+
+    if (!room) {
+      throw new CustomError("Room not found or already deleted", 404);
+    }
+
+    const now = new Date();
+
+    // Soft delete all messages in room
+    await Message.updateMany(
+      { room: roomId, deletedAt: null },
+      {
+        deletedAt: now,
+        deletedBy: req.userId,
+      }
+    );
+
+    // Soft delete room
+    room.deletedAt = now;
+    await room.save();
+
+    res.json({
+      success: true,
+      message: "Room and its messages have been deleted",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const getDeletedRooms = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skipIndex = (page - 1) * limit;
+
+    const query = {
+      deletedAt: { $ne: null },
+    };
+
+    if (req.query.search) {
+      query.name = new RegExp(req.query.search, "i");
+    }
+    const total = await Room.countDocuments(query);
+
+    const deletedRooms = await Room.find(query)
+      .populate("creator", "id email firstName lastName image color role")
+      .populate("members", "id email firstName lastName image color role")
+      .sort({ deletedAt: -1 })
+      .skip(skipIndex)
+      .limit(limit);
+
+    res.json({
+      success: true,
+      data: {
+        rooms: deletedRooms,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const restoreRoom = async (req, res, next) => {
+  const { roomId } = req.params;
+
+  try {
+    const room = await Room.findOne({
+      _id: roomId,
+      deletedAt: { $ne: null },
+    });
+
+    if (!room) {
+      throw new CustomError("Room not found or not deleted", 404);
+    }
+
+    const existingRoom = await Room.findOne({
+      name: room.name,
+      deletedAt: null,
+    });
+
+    if (existingRoom) {
+      throw new CustomError("A room with this name already exists", 400);
+    }
+
+    await Message.updateMany(
+      {
+        room: roomId,
+        deletedAt: { $ne: null },
+      },
+      {
+        $set: {
+          deletedAt: null,
+          deletedBy: null,
+        },
+      }
+    );
+
+    // Restore room
+    room.deletedAt = null;
+    const restoredRoom = await room.save();
+
+    const populatedRoom = await Room.findById(restoredRoom._id)
+      .populate("creator", "id email firstName lastName image color role")
+      .populate("members", "id email firstName lastName image color role");
+
+    res.json({
+      success: true,
+      message: "Room and its messages have been restored",
+      room: populatedRoom,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

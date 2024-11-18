@@ -22,11 +22,15 @@ const RoomActions = ({ room, onRefresh, isDeleted }) => {
   const handleDelete = async () => {
     setIsLoading(true);
     try {
-      await apiClient.patch(`/api/admin/rooms/${room._id}/status`);
+      await apiClient.patch(
+        `/api/admin/rooms/${room._id}/status`,
+        {},
+        { withCredentials: true }
+      );
       toast.success("Room deleted successfully");
       onRefresh();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to delete room");
+      toast.error(error.response?.data?.error || "Failed to delete room");
     } finally {
       setIsLoading(false);
       setIsDeleteDialogOpen(false);
@@ -36,11 +40,15 @@ const RoomActions = ({ room, onRefresh, isDeleted }) => {
   const handleRestore = async () => {
     setIsLoading(true);
     try {
-      await apiClient.post(`/api/admin/rooms/${room._id}/restore`);
+      await apiClient.post(
+        `/api/admin/rooms/${room._id}/restore`,
+        {},
+        { withCredentials: true }
+      );
       toast.success("Room restored successfully");
       onRefresh();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to restore room");
+      toast.error(error.response?.data?.error || "Failed to restore room");
     } finally {
       setIsLoading(false);
       setIsRestoreDialogOpen(false);

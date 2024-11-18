@@ -50,8 +50,10 @@ const RoomList = () => {
   const fetchDeletedRooms = async () => {
     setIsLoading(true);
     try {
-      const response = await apiClient.get("/api/admin/rooms/deleted");
-      setDeletedRooms(response.data.data);
+      const response = await apiClient.get("/api/admin/rooms/deleted", {
+        withCredentials: true,
+      });
+      setDeletedRooms(response.data.data.rooms);
     } catch (error) {
       toast.error("Failed to fetch deleted rooms");
     } finally {

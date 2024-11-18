@@ -3,17 +3,20 @@ import {
   addUser,
   adminChangePassword,
   adminCreateRoom,
+  adminDeleteRoom,
   adminForgotPassword,
   adminLogin,
   adminLogout,
   adminResetPassword,
   adminResetUserPassword,
   deleteUser,
+  getDeletedRooms,
   getDeletedUsers,
   getRoom,
   getRooms,
   getUser,
   getUsers,
+  restoreRoom,
   restoreUser,
   updateRoom,
   updateUser,
@@ -63,10 +66,20 @@ router.post("/logout", verifyToken, checkRole("admin"), adminLogout);
 
 // Room management routes
 router.get("/rooms", verifyToken, checkRole("admin"), getRooms);
-router.get("/rooms/deleted", verifyToken, checkRole("admin"));
+router.get("/rooms/deleted", verifyToken, checkRole("admin"), getDeletedRooms);
 router.get("/rooms/:roomId", verifyToken, checkRole("admin"), getRoom);
 router.post("/rooms", verifyToken, checkRole("admin"), adminCreateRoom);
 router.put("/rooms/:roomId", verifyToken, checkRole("admin"), updateRoom);
-router.patch("/rooms/:roomId/status", verifyToken, checkRole("admin")); // soft delete
-router.post("/rooms/:roomId/restore", verifyToken, checkRole("admin"));
+router.patch(
+  "/rooms/:roomId/status",
+  verifyToken,
+  checkRole("admin"),
+  adminDeleteRoom
+); // soft delete
+router.post(
+  "/rooms/:roomId/restore",
+  verifyToken,
+  checkRole("admin"),
+  restoreRoom
+);
 export default router;
