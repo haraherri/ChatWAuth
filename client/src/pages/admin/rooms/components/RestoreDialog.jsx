@@ -16,12 +16,17 @@ const RestoreDialog = ({ isOpen, isLoading, onClose, onConfirm, roomName }) => {
         <AlertDialogHeader>
           <AlertDialogTitle>Restore Room</AlertDialogTitle>
           <AlertDialogDescription>
-            This will restore the room "{roomName}". Do you want to continue?
+            This will restore the room "{roomName}" and allow users to access it
+            again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={isLoading}>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="bg-green-600 hover:bg-green-700"
+          >
             {isLoading ? "Restoring..." : "Restore"}
           </AlertDialogAction>
         </AlertDialogFooter>

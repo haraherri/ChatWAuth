@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { MoreHorizontal, Pencil, Trash, RotateCcw } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash,
+  RotateCcw,
+  RotateCw,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,42 +61,52 @@ const RoomActions = ({ room, onRefresh, isDeleted }) => {
     }
   };
 
+  if (isDeleted) {
+    return (
+      <>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsRestoreDialogOpen(true)}
+          className="text-green-600 hover:text-green-700"
+        >
+          <RotateCw className="mr-2 h-4 w-4" />
+          Restore
+        </Button>
+
+        <RestoreDialog
+          isOpen={isRestoreDialogOpen}
+          isLoading={isLoading}
+          onClose={() => setIsRestoreDialogOpen(false)}
+          onConfirm={handleRestore}
+          roomName={room.name}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Open menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {!isDeleted ? (
-            <>
-              <DropdownMenuItem
-                onClick={() => navigate(`/admin/rooms/edit/${room._id}`)}
-                className="cursor-pointer"
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setIsDeleteDialogOpen(true)}
-                className="cursor-pointer text-destructive focus:text-destructive"
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </>
-          ) : (
-            <DropdownMenuItem
-              onClick={() => setIsRestoreDialogOpen(true)}
-              className="cursor-pointer"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Restore
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            onClick={() => navigate(`/admin/rooms/edit/${room._id}`)}
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="text-red-600"
+          >
+            <Trash className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -99,14 +115,6 @@ const RoomActions = ({ room, onRefresh, isDeleted }) => {
         isLoading={isLoading}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDelete}
-        roomName={room.name}
-      />
-
-      <RestoreDialog
-        isOpen={isRestoreDialogOpen}
-        isLoading={isLoading}
-        onClose={() => setIsRestoreDialogOpen(false)}
-        onConfirm={handleRestore}
         roomName={room.name}
       />
     </>

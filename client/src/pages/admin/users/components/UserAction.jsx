@@ -125,4 +125,5 @@ const UserActions = ({ user, onRefresh, isDeleted }) => {
     </>
   );
 };
+
 export default UserActions;
