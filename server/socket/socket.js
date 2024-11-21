@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import Message from "../models/message.model.js";
 import Room from "../models/room.model.js";
 import User from "../models/user.model.js";
+import { producer } from "../config/kafka.js";
 
 export const userSocketMap = new Map();
 const setupSocket = (server) => {
@@ -35,26 +36,24 @@ const setupSocket = (server) => {
         }
       }
 
-      const createdMessage = await Message.create(message);
-      const messageData = await Message.findById(createdMessage._id)
-        .populate("sender", "id email firstName lastName image color")
-        .populate("recipient", "id email firstName lastName image color");
+      await producer.connect();
+      await producer.send({
+        topic: "chat-messages",
+        messages: [
+          {
+            key: message.room || message.recipient,
+            value: JSON.stringify(message),
+          },
+        ],
+      });
 
-      // Rest of existing send message logic
-      if (message.recipient) {
-        const recipientSocketId = userSocketMap.get(message.recipient);
-        if (recipientSocketId) {
-          io.to(recipientSocketId).emit("newMessage", messageData);
-        }
-      } else if (message.room) {
-        io.to(message.room).emit("newMessage", messageData);
-      }
-
+      // Gửi ACK cho sender
       const senderSocketId = userSocketMap.get(message.sender);
       if (senderSocketId) {
         io.to(senderSocketId).emit("messageSent", {
           status: "success",
-          message: messageData,
+          messageId: message._id,
+          message: message, // Thêm message object để client có thể render
         });
       }
     } catch (error) {

@@ -14,6 +14,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import roomRoutes from "./routes/roomRoutes.js";
 import setupSocket from "./socket/socket.js";
 import { initCronJobs } from "./config/cronJobs.js";
+import { runMessageConsumer } from "./services/messageConsumer.js";
 dotenv.config();
 
 const app = express();
@@ -52,6 +53,8 @@ app.use("/api/rooms", roomRoutes);
   try {
     await connectDB();
     initCronJobs();
+    const messageConsumerInstance = runMessageConsumer(io);
+    await messageConsumerInstance();
     server.listen(PORT, () => {
       console.log(`Backend server is running on port ${PORT}`);
     });
