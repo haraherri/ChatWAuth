@@ -36,25 +36,44 @@ const setupSocket = (server) => {
         }
       }
 
-      await producer.connect();
-      await producer.send({
-        topic: "chat-messages",
-        messages: [
-          {
-            key: message.room || message.recipient,
-            value: JSON.stringify(message),
-          },
-        ],
-      });
-
-      // Gửi ACK cho sender
-      const senderSocketId = userSocketMap.get(message.sender);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("messageSent", {
-          status: "success",
-          messageId: message._id,
-          message: message, // Thêm message object để client có thể render
+      if (process.env.ENABLE_KAFKA === "true") {
+        // Kafka logic giữ nguyên...
+        await producer.connect();
+        await producer.send({
+          topic: "chat-messages",
+          messages: [
+            {
+              key: message.room || message.recipient,
+              value: JSON.stringify(message),
+            },
+          ],
         });
+      } else {
+        // Fallback logic khi không có Kafka
+        const createdMessage = await Message.create(message);
+        const populatedMessage = await Message.findById(createdMessage._id)
+          .populate("sender", "id email firstName lastName image color")
+          .populate("recipient", "id email firstName lastName image color");
+
+        // Emit to sender
+        const senderSocketId = userSocketMap.get(message.sender);
+        if (senderSocketId) {
+          io.to(senderSocketId).emit("messageSent", {
+            status: "success",
+            messageId: populatedMessage._id,
+            message: populatedMessage,
+          });
+        }
+
+        // Emit to recipient or room
+        if (message.recipient) {
+          const recipientSocketId = userSocketMap.get(message.recipient);
+          if (recipientSocketId) {
+            io.to(recipientSocketId).emit("newMessage", populatedMessage);
+          }
+        } else if (message.room) {
+          io.to(message.room).emit("newMessage", populatedMessage);
+        }
       }
     } catch (error) {
       const senderSocketId = userSocketMap.get(message.sender);
