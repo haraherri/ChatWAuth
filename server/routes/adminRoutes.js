@@ -12,10 +12,14 @@ import {
   deleteUser,
   getDeletedRooms,
   getDeletedUsers,
+  getMessageStats,
+  getOverallStats,
   getRoom,
   getRooms,
+  getRoomStats,
   getUser,
   getUsers,
+  getUserStats,
   restoreRoom,
   restoreUser,
   updateRoom,
@@ -81,5 +85,31 @@ router.post(
   verifyToken,
   checkRole("admin"),
   restoreRoom
+);
+
+//dashboard routes
+router.get(
+  "/dashboard/stats",
+  verifyToken,
+  checkRole("admin"),
+  getOverallStats
+);
+router.get(
+  "/dashboard/user-stats",
+  verifyToken,
+  checkRole("admin"),
+  getUserStats
+);
+router.get(
+  "/dashboard/message-stats",
+  verifyToken,
+  checkRole("admin"),
+  getMessageStats
+);
+router.get(
+  "/dashboard/room-stats",
+  verifyToken,
+  checkRole("admin"),
+  getRoomStats
 );
 export default router;

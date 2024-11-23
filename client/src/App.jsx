@@ -19,6 +19,7 @@ import AdminLayout from "./pages/admin/components/Layout";
 import UserForm from "./pages/admin/users/components/UserForm";
 import RoomList from "./pages/admin/rooms/components/RoomList";
 import RoomForm from "./pages/admin/rooms/components/RoomForm";
+import Dashboard from "./pages/admin/components/dashboard";
 
 const PrivateRoute = ({ children }) => {
   const { userInfo } = useAppStore();
@@ -39,7 +40,7 @@ const AdminRoute = ({ children }) => {
 const AdminAuthRoute = ({ children }) => {
   const { userInfo } = useAppStore();
   const isAdminAuth = !!userInfo && userInfo.role === "admin";
-  return isAdminAuth ? <Navigate to="/admin/users" /> : children;
+  return isAdminAuth ? <Navigate to="/admin" /> : children;
 };
 
 const App = () => {
@@ -165,6 +166,7 @@ const App = () => {
             </AdminRoute>
           }
         >
+          <Route index element={<Dashboard />} />
           <Route path="users" element={<UserList />} />
           <Route path="users/add" element={<UserForm />} />
           <Route path="users/edit/:_id" element={<UserForm />} />

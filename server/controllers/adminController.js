@@ -796,3 +796,169 @@ export const restoreRoom = async (req, res, next) => {
     next(error);
   }
 };
+export const getOverallStats = async (req, res, next) => {
+  try {
+    const [totalUsers, activeUsers, totalRooms, totalMessages] =
+      await Promise.all([
+        User.countDocuments({ deletedAt: null }),
+        User.countDocuments({
+          deletedAt: null,
+          lastLogin: {
+            $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        }),
+        Room.countDocuments({ deletedAt: null }),
+        Message.countDocuments({ deletedAt: null }),
+      ]);
+
+    res.status(200).json({
+      message: "Overall stats retrieved successfully",
+      data: {
+        totalUsers,
+        activeUsers,
+        totalRooms,
+        totalMessages,
+        activeUsersPercentage: ((activeUsers / totalUsers) * 100).toFixed(2),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserStats = async (req, res, next) => {
+  try {
+    const usersByRole = await User.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: "$role", count: { $sum: 1 } } },
+    ]);
+
+    const newUsersLastWeek = await User.countDocuments({
+      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      deletedAt: null,
+    });
+
+    const verificationStats = await User.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $group: {
+          _id: "$isEmailVerified",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      message: "User stats retrieved successfully",
+      data: {
+        usersByRole,
+        newUsersLastWeek,
+        verificationStats,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMessageStats = async (req, res, next) => {
+  try {
+    // Messages per day trong 7 ngày gần nhất
+    const messagesByDay = await Message.aggregate([
+      {
+        $match: {
+          deletedAt: null,
+          createdAt: {
+            $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$createdAt",
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const messageTypes = await Message.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: "$messageType", count: { $sum: 1 } } },
+    ]);
+
+    const pinnedMessages = await Message.countDocuments({
+      isPinned: true,
+      deletedAt: null,
+    });
+
+    res.status(200).json({
+      message: "Message stats retrieved successfully",
+      data: {
+        messagesByDay,
+        messageTypes,
+        pinnedMessages,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRoomStats = async (req, res, next) => {
+  try {
+    const roomsWithMemberCount = await Room.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $project: {
+          name: 1,
+          memberCount: { $size: "$members" },
+        },
+      },
+      { $sort: { memberCount: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const roomsWithMessageCount = await Message.aggregate([
+      { $match: { deletedAt: null, room: { $ne: null } } },
+      {
+        $group: {
+          _id: "$room",
+          messageCount: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "rooms",
+          localField: "_id",
+          foreignField: "_id",
+          as: "roomInfo",
+        },
+      },
+      { $unwind: "$roomInfo" },
+      {
+        $project: {
+          name: "$roomInfo.name",
+          messageCount: 1,
+        },
+      },
+      { $sort: { messageCount: -1 } },
+      { $limit: 10 },
+    ]);
+
+    res.status(200).json({
+      message: "Room stats retrieved successfully",
+      data: {
+        roomsWithMemberCount,
+        roomsWithMessageCount,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
