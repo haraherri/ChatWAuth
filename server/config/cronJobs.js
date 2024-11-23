@@ -3,6 +3,7 @@ import Message from "../models/message.model.js";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import Room from "../models/room.model.js";
 
 // Validate cron expression and configuration
 const validateAndStartJob = (cronExpression, jobFunction, jobName) => {
@@ -38,6 +39,18 @@ const deleteFile = async (fileUrl) => {
   } catch (error) {
     console.error(`Error deleting file ${fileUrl}:`, error);
     return false;
+  }
+};
+
+const syncPinnedMessages = async () => {
+  try {
+    const rooms = await Room.find();
+    for (const room of rooms) {
+      await Room.syncPinnedCount(room._id);
+    }
+    console.log("Synced pinned message counts for all rooms");
+  } catch (error) {
+    console.error("Error syncing pinned message counts:", error);
   }
 };
 
@@ -101,7 +114,7 @@ const cleanupDeletedMessages = async () => {
 export const initCronJobs = () => {
   // Both environments run at midnight (00:00)
   const cronSchedule = "0 0 * * *";
-
+  validateAndStartJob("0 0 * * *", syncPinnedMessages, "Sync Pinned Messages");
   validateAndStartJob(cronSchedule, cleanupDeletedMessages, "Message Cleanup");
   console.log(`Cron job initialized for environment: ${process.env.NODE_ENV}`);
   console.log(

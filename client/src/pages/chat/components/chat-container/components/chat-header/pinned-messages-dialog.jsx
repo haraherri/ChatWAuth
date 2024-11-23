@@ -91,12 +91,21 @@ const PinnedMessagesDialog = () => {
       fetchPinnedMessages();
     };
 
+    const handleMessageDeleted = (data) => {
+      setPinnedMessages((prevMessages) =>
+        prevMessages.filter((msg) => msg._id !== data.messageId)
+      );
+      fetchPinnedMessages();
+    };
+
     socket.on("pinnedMessages", handlePinnedMessages);
     socket.on("messagePin", handleMessagePin);
+    socket.on("messageDeleted", handleMessageDeleted);
 
     return () => {
       socket.off("pinnedMessages", handlePinnedMessages);
       socket.off("messagePin", handleMessagePin);
+      socket.off("messageDeleted", handleMessageDeleted);
     };
   }, [socket, setPinnedMessages, updateMessage, fetchPinnedMessages]);
 

@@ -181,11 +181,14 @@ const setupSocket = (server) => {
       const newPinStatus = !message.isPinned;
 
       // if pinning, check if room has reached max pinned messages
-      if (newPinStatus && room.pinnedMessagesCount >= 10) {
-        socket.emit("pinMessageError", {
-          error: "Room has reached maximum number of pinned messages (10)",
-        });
-        return;
+      if (newPinStatus) {
+        const canPin = await room.canPinMessage();
+        if (!canPin) {
+          socket.emit("pinMessageError", {
+            error: "Room has reached maximum number of pinned messages (10)",
+          });
+          return;
+        }
       }
 
       // update pin status
@@ -203,7 +206,7 @@ const setupSocket = (server) => {
         .populate("pinnedBy", "id firstName lastName")
         .populate("sender", "id email firstName lastName image color");
 
-      // Emit message pin event to all users in the room ( action: pinned/unpinned )
+      // Emit message pin event to all users in the room
       io.to(message.room.toString()).emit("messagePin", {
         messageId,
         action: newPinStatus ? "pinned" : "unpinned",

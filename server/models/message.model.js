@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Room from "./room.model.js";
 
 const MessageSchema = new mongoose.Schema(
   {
@@ -65,6 +66,37 @@ const MessageSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+MessageSchema.pre(
+  "deleteOne",
+  { document: true, query: false },
+  async function () {
+    if (this.isPinned && this.room) {
+      await Room.findByIdAndUpdate(this.room, {
+        $inc: { pinnedMessagesCount: -1 },
+      });
+    }
+  }
+);
+
+MessageSchema.pre("deleteMany", async function () {
+  const messages = await this.model.find(this.getQuery());
+
+  const roomCounts = messages.reduce((acc, msg) => {
+    if (msg.isPinned && msg.room) {
+      acc[msg.room] = (acc[msg.room] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const updates = Object.entries(roomCounts).map(([roomId, count]) =>
+    Room.findByIdAndUpdate(roomId, {
+      $inc: { pinnedMessagesCount: -count },
+    })
+  );
+
+  await Promise.all(updates);
+});
 
 const Message = mongoose.model("Messages", MessageSchema);
 
