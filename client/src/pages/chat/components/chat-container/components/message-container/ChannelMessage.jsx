@@ -8,6 +8,7 @@ import {
 import { Download, FileIcon, MoreHorizontal, Pin, Trash2 } from "lucide-react";
 import moment from "moment";
 import { getColor } from "@/lib/utils";
+import { getOriginalFilename } from "@/utils/helper";
 
 export const ChannelMessage = ({
   message,
@@ -155,7 +156,9 @@ export const ChannelMessage = ({
           )}
           <FileIcon size={20} />
           <div className="flex flex-col">
-            <span className="text-sm">{message.fileUrl.split("/").pop()}</span>
+            <span className="text-sm">
+              {getOriginalFilename(message.fileUrl)}
+            </span>
           </div>
           <button
             onClick={() => onFileDownload(message.fileUrl)}

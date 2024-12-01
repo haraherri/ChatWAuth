@@ -35,11 +35,17 @@ const chatFileStorage = multer.diskStorage({
     cb(null, filesDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+    // Decode originalname from UTF-8
+    const originalName = Buffer.from(file.originalname, "binary").toString(
+      "utf8"
     );
+    const extension = path.extname(originalName);
+    const nameWithoutExt = path.basename(originalName, extension);
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+
+    // Create final filename that preserves UTF-8 characters
+    const safeFilename = `${nameWithoutExt}-${uniqueSuffix}${extension}`;
+    cb(null, safeFilename);
   },
 });
 

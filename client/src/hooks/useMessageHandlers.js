@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useSocket } from "@/context/SocketContext";
 import { apiClient } from "@/lib/api-client";
 import { GET_ALL_MESSAGES_ROUTES } from "@/utils/constants";
+import { getOriginalFilename } from "@/utils/helper";
 
 export const useMessageHandlers = (
   setSelectedChatMessages,
@@ -87,7 +88,7 @@ export const useMessageHandlers = (
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = fileUrl.split("/").pop();
+      a.download = getOriginalFilename(fileUrl);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

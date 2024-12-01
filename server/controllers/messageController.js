@@ -26,8 +26,13 @@ export const getMessagesBetweenUsers = async (req, res, next) => {
     next(error);
   }
 };
+
 const generateFileUrl = (filename) => {
-  return process.env.URL + `/uploads/files/${filename}`;
+  // Make sure filename is properly decoded for URLs
+  const decodedFilename = decodeURIComponent(filename);
+  // Re-encode for URL but preserve UTF-8 characters
+  const encodedFilename = encodeURIComponent(decodedFilename);
+  return `${process.env.URL}/uploads/files/${encodedFilename}`;
 };
 
 export const uploadMessageFile = async (req, res, next) => {
