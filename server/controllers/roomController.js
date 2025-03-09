@@ -3,6 +3,7 @@ import Message from "../models/message.model.js";
 import Room from "../models/room.model.js";
 import User from "../models/user.model.js";
 import { userSocketMap } from "../socket/socket.js";
+import mongoose, { mongo } from "mongoose";
 
 export const createRoom = async (req, res, next) => {
   const { name, memberIds } = req.body;
@@ -64,13 +65,160 @@ export const createRoom = async (req, res, next) => {
 
 export const getUserRooms = async (req, res, next) => {
   try {
-    const rooms = await Room.find({
-      members: req.userId,
-      deletedAt: null,
-    })
-      .populate("members", "firstName lastName email image role color")
-      .populate("creator", "firstName lastName email image role color")
-      .sort({ createdAt: -1 });
+    const userId = new mongoose.Types.ObjectId(req.userId);
+
+    const rooms = await Room.aggregate([
+      // Match rooms user is member of
+      {
+        $match: {
+          members: userId,
+          deletedAt: null,
+        },
+      },
+
+      // Lookup last message for each room
+      {
+        $lookup: {
+          from: "messages",
+          let: { roomId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$room", "$$roomId"] },
+                    { $eq: ["$deletedAt", null] },
+                  ],
+                },
+              },
+            },
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 },
+          ],
+          as: "lastMessage",
+        },
+      },
+
+      // Add lastMessage and lastMessageTime fields
+      {
+        $addFields: {
+          lastMessage: { $arrayElemAt: ["$lastMessage", 0] },
+          lastMessageTime: { $arrayElemAt: ["$lastMessage.createdAt", 0] },
+        },
+      },
+
+      // Populate members info
+      {
+        $lookup: {
+          from: "users",
+          let: { memberIds: "$members" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$_id", "$$memberIds"] },
+                deletedAt: null,
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                image: 1,
+                color: 1,
+                role: 1,
+              },
+            },
+          ],
+          as: "members",
+        },
+      },
+
+      // Populate creator info
+      {
+        $lookup: {
+          from: "users",
+          let: { creatorId: "$creator" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$creatorId"] },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                image: 1,
+                color: 1,
+                role: 1,
+              },
+            },
+          ],
+          as: "creatorInfo",
+        },
+      },
+
+      // Unwind creator
+      {
+        $addFields: {
+          creator: { $arrayElemAt: ["$creatorInfo", 0] },
+        },
+      },
+
+      // Populate sender info for lastMessage
+      {
+        $lookup: {
+          from: "users",
+          let: { senderId: "$lastMessage.sender" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$senderId"] },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                image: 1,
+                color: 1,
+              },
+            },
+          ],
+          as: "lastMessage.sender",
+        },
+      },
+
+      // Format lastMessage sender
+      {
+        $addFields: {
+          "lastMessage.sender": { $arrayElemAt: ["$lastMessage.sender", 0] },
+        },
+      },
+
+      // Sort by lastMessageTime
+      {
+        $sort: { lastMessageTime: -1 },
+      },
+
+      // Project final fields
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          members: 1,
+          creator: 1,
+          lastMessage: 1,
+          createdAt: 1,
+        },
+      },
+    ]);
 
     res.status(200).json({
       success: true,

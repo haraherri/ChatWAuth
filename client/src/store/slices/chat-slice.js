@@ -104,4 +104,43 @@ export const createChatSlice = (set, get) => ({
       pinnedMessages: [],
       highlightedMessageId: null,
     }),
+  sortContactsByLastMessage: () => {
+    const contacts = [...get().directMessagesContacts].sort((a, b) => {
+      return (
+        new Date(b.lastMessage?.createdAt || 0) -
+        new Date(a.lastMessage?.createdAt || 0)
+      );
+    });
+    set({ directMessagesContacts: contacts });
+  },
+
+  sortChannelsByLastMessage: () => {
+    const channelList = [...get().channels].sort((a, b) => {
+      return (
+        new Date(b.lastMessage?.createdAt || 0) -
+        new Date(a.lastMessage?.createdAt || 0)
+      );
+    });
+    set({ channels: channelList });
+  },
+
+  updateLastMessage: (id, message, type) => {
+    if (type === "contact") {
+      const contacts = get().directMessagesContacts.map((contact) => {
+        if (contact._id === id) {
+          return { ...contact, lastMessage: message };
+        }
+        return contact;
+      });
+      set({ directMessagesContacts: contacts });
+    } else if (type === "channel") {
+      const channels = get().channels.map((channel) => {
+        if (channel._id === id) {
+          return { ...channel, lastMessage: message };
+        }
+        return channel;
+      });
+      set({ channels: channels });
+    }
+  },
 });

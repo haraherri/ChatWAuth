@@ -47,7 +47,7 @@ const ContactsContainer = () => {
       <div className="pt-3">
         <Logo />
       </div>
-      {/* <div className="my-5">
+      <div className="my-5">
         <div className="flex items-center justify-between pr-10">
           <Title text="Direct Messages" />
           <NewDM />
@@ -55,7 +55,7 @@ const ContactsContainer = () => {
         <div className="max-h-[38vh] overflow-y-auto scrollbar-hidden">
           <ContactList contacts={directMessagesContacts} />
         </div>
-      </div> */}
+      </div>
       <div className="my-5">
         <div className="flex items-center justify-between pr-10">
           <Title text="Channels" />

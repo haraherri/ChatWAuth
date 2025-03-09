@@ -24,45 +24,94 @@ export const SocketProvider = ({ children }) => {
       });
 
       const handleNewMessage = (message) => {
-        const { selectedChatData, selectedChatType, addMessage } =
-          useAppStore.getState();
+        const {
+          selectedChatType,
+          selectedChatData,
+          addMessage,
+          updateLastMessage,
+          sortContactsByLastMessage,
+          sortChannelsByLastMessage,
+          userInfo,
+        } = useAppStore.getState();
 
-        if (message.sender._id !== userInfo.id) {
-          if (selectedChatType === "contact") {
-            if (
-              selectedChatData._id === message.sender._id ||
-              selectedChatData._id === message.recipient._id
-            ) {
-              addMessage(message);
-            }
-          } else if (selectedChatType === "channel") {
-            if (selectedChatData._id === message.room) {
-              addMessage(message);
-            }
+        // Xử lý tin nhắn DM
+        if (!message.room) {
+          // Nếu là tin nhắn DM
+          const contactId =
+            message.sender._id === userInfo.id
+              ? message.recipient._id
+              : message.sender._id;
+
+          // Cập nhật tin nhắn cuối và sắp xếp lại danh sách
+          updateLastMessage(contactId, message, "contact");
+          sortContactsByLastMessage();
+
+          // Thêm tin nhắn vào cuộc trò chuyện nếu đang mở
+          if (
+            selectedChatType === "contact" &&
+            selectedChatData?._id === contactId
+          ) {
+            addMessage(message);
+          }
+        }
+        // Xử lý tin nhắn channel
+        else {
+          const channelId = message.room;
+
+          // Cập nhật tin nhắn cuối và sắp xếp lại danh sách
+          updateLastMessage(channelId, message, "channel");
+          sortChannelsByLastMessage();
+
+          // Thêm tin nhắn vào cuộc trò chuyện nếu đang mở
+          if (
+            selectedChatType === "channel" &&
+            selectedChatData?._id === channelId
+          ) {
+            addMessage(message);
           }
         }
       };
 
       const handleMessageSent = (response) => {
         if (response.status === "success") {
-          const { selectedChatData, selectedChatType, addMessage } =
-            useAppStore.getState();
+          const {
+            selectedChatData,
+            selectedChatType,
+            addMessage,
+            updateLastMessage,
+            sortContactsByLastMessage,
+            sortChannelsByLastMessage,
+          } = useAppStore.getState();
 
-          if (response.message.sender._id === userInfo.id) {
-            if (selectedChatType === "contact") {
-              if (selectedChatData._id === response.message.recipient._id) {
-                addMessage(response.message);
-              }
-            } else if (selectedChatType === "channel") {
-              if (selectedChatData._id === response.message.room) {
-                addMessage(response.message);
-              }
+          const message = response.message;
+
+          // Xử lý tin nhắn DM
+          if (!message.room) {
+            updateLastMessage(message.recipient._id, message, "contact");
+            sortContactsByLastMessage();
+
+            if (
+              selectedChatType === "contact" &&
+              selectedChatData?._id === message.recipient._id
+            ) {
+              addMessage(message);
             }
           }
-        } else {
-          toast.error("Failed to send message");
+          // Xử lý tin nhắn channel
+          else {
+            updateLastMessage(message.room, message, "channel");
+            sortChannelsByLastMessage();
+
+            if (
+              selectedChatType === "channel" &&
+              selectedChatData?._id === message.room
+            ) {
+              addMessage(message);
+            }
+          }
         }
       };
+
       const handleMessageDeleted = (data) => {
         const { updateMessage } = useAppStore.getState();
         updateMessage(data.messageId, {

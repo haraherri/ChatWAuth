@@ -55,10 +55,11 @@ export const getContactforDMList = async (req, res, next) => {
       {
         $match: {
           $or: [{ sender: userId }, { recipient: userId }],
+          deletedAt: null, // Thêm điều kiện này để lọc tin nhắn chưa bị xóa
         },
       },
 
-      // Stage 2: Sort by last creation time
+      // Stage 2: Sort by creation time
       {
         $sort: { createdAt: -1 },
       },
@@ -73,11 +74,12 @@ export const getContactforDMList = async (req, res, next) => {
               else: "$sender",
             },
           },
+          lastMessage: { $first: "$$ROOT" }, // Lưu lại toàn bộ document tin nhắn cuối
           lastMessageTime: { $first: "$createdAt" },
         },
       },
 
-      // Stage 4: Join with collection users
+      // Stage 4: Join with users collection
       {
         $lookup: {
           from: "users",
@@ -93,12 +95,13 @@ export const getContactforDMList = async (req, res, next) => {
           as: "contactInfo",
         },
       },
-      // Stage 5: extract array contactInfo
+
+      // Stage 5: Unwind contactInfo
       {
         $unwind: "$contactInfo",
       },
 
-      // Stage 6: Returning format
+      // Stage 6: Format return data
       {
         $project: {
           _id: 1,
@@ -108,12 +111,51 @@ export const getContactforDMList = async (req, res, next) => {
           lastName: "$contactInfo.lastName",
           image: "$contactInfo.image",
           color: "$contactInfo.color",
+          lastMessage: {
+            _id: "$lastMessage._id",
+            content: "$lastMessage.content",
+            messageType: "$lastMessage.messageType",
+            createdAt: "$lastMessage.createdAt",
+            sender: "$lastMessage.sender",
+            recipient: "$lastMessage.recipient",
+          },
         },
       },
 
       // Stage 7: Sort by newest message
       {
         $sort: { lastMessageTime: -1 },
+      },
+
+      // Stage 8: Populate sender info trong lastMessage
+      {
+        $lookup: {
+          from: "users",
+          let: { senderId: "$lastMessage.sender" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$senderId"] },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                image: 1,
+                color: 1,
+              },
+            },
+          ],
+          as: "lastMessage.sender",
+        },
+      },
+      {
+        $addFields: {
+          "lastMessage.sender": { $arrayElemAt: ["$lastMessage.sender", 0] },
+        },
       },
     ]);
 
