@@ -6,6 +6,53 @@ export const createChatSlice = (set, get) => ({
   channels: [],
   pinnedMessages: [],
   highlightedMessageId: null,
+  userStatuses: {},
+  roomOnlineUsers: {},
+
+  getUserStatus: (userId) => {
+    const status = get().userStatuses[userId];
+    return status || { isOnline: false, lastActive: null };
+  },
+
+  updateUserStatus: (userId, isOnline, lastActive) => {
+    const userStatuses = { ...get().userStatuses };
+    userStatuses[userId] = { isOnline, lastActive };
+    set({ userStatuses });
+
+    // update contact data
+    const contacts = get().directMessagesContacts.map((contact) => {
+      if (contact._id === userId) {
+        return { ...contact, isOnline, lastActive };
+      }
+      return contact;
+    });
+    set({ directMessagesContacts: contacts });
+
+    // update selected chat data if the user is online
+    const selectedChatData = get().selectedChatData;
+    const selectedChatType = get().selectedChatType;
+
+    if (
+      selectedChatData &&
+      selectedChatType === "contact" &&
+      selectedChatData._id === userId
+    ) {
+      set({ selectedChatData: { ...selectedChatData, isOnline, lastActive } });
+    }
+  },
+
+  // method to update the online users in a room
+  updateRoomOnlineUsers: (roomId, onlineUsers) => {
+    const roomOnlineUsers = { ...get().roomOnlineUsers };
+    roomOnlineUsers[roomId] = onlineUsers;
+    set({ roomOnlineUsers });
+  },
+
+  // method to get the online users in a room
+  getRoomOnlineUsers: (roomId) => {
+    return get().roomOnlineUsers[roomId] || [];
+  },
+
   setHighlightedMessageId: (messageId) =>
     set({ highlightedMessageId: messageId }),
   setChannels: (channels) => set({ channels }),
@@ -50,6 +97,10 @@ export const createChatSlice = (set, get) => ({
         selectedChatMessages: [],
       });
     }
+
+    const roomOnlineUsers = { ...get().roomOnlineUsers };
+    delete roomOnlineUsers[channelId];
+    set({ roomOnlineUsers });
   },
   updateMessagePinStatus: (messageId, isPinned, pinnedBy, pinnedAt) => {
     const selectedChatMessages = get().selectedChatMessages.map((message) =>
@@ -103,6 +154,8 @@ export const createChatSlice = (set, get) => ({
       channels: [],
       pinnedMessages: [],
       highlightedMessageId: null,
+      userStatuses: {},
+      roomOnlineUsers: {},
     }),
   sortContactsByLastMessage: () => {
     const contacts = [...get().directMessagesContacts].sort((a, b) => {

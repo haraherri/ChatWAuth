@@ -1,18 +1,55 @@
 import { useAppStore } from "@/store";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { getColor } from "@/lib/utils";
 import moment from "moment";
+import { useSocket } from "@/context/SocketContext";
 
 const ContactList = ({ contacts, isChannel = false }) => {
   const {
     setSelectedChatType,
     selectedChatData,
-    selectedChatType,
-    setSelectedChatMessages,
     setSelectedChatData,
     userInfo,
+    getUserStatus,
+    updateUserStatus,
   } = useAppStore();
+
+  const { socket } = useSocket();
+  const previousContacts = useRef([]); // save previous contacts to compare with new contacts
+
+  useEffect(() => {
+    // when contacts change, emit getUserStatus for new contacts
+    if (!isChannel && socket && contacts) {
+      const newContacts = contacts.filter(
+        (contact) =>
+          !previousContacts.current.some(
+            (prevContact) => prevContact._id === contact._id
+          )
+      );
+
+      newContacts.forEach((contact) => {
+        socket.emit("getUserStatus", contact._id);
+      });
+      previousContacts.current = contacts;
+    }
+  }, [contacts, isChannel, socket]);
+
+  useEffect(() => {
+    const handleUserStatusUpdate = (data) => {
+      updateUserStatus(data.userId, data.isOnline, data.lastActive);
+    };
+
+    if (socket) {
+      socket.on("userStatusUpdate", handleUserStatusUpdate);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("userStatusUpdate", handleUserStatusUpdate);
+      }
+    };
+  }, [socket, updateUserStatus]); 
 
   const handleClick = (contact) => {
     if (isChannel) setSelectedChatType("channel");
@@ -26,7 +63,6 @@ const ContactList = ({ contacts, isChannel = false }) => {
     if (!contact.lastMessage || !contact.lastMessage.sender) return null;
 
     let messagePreview = "";
-    // Kiểm tra sender trước khi truy cập _id
     const isCurrentUser = contact.lastMessage.sender?._id === userInfo.id;
 
     if (contact.lastMessage.deletedAt) {
@@ -77,7 +113,10 @@ const ContactList = ({ contacts, isChannel = false }) => {
           <div className="flex gap-5 items-start">
             <div className="flex-shrink-0">
               {!isChannel ? (
-                <Avatar className="h-10 w-10 rounded-full overflow-hidden">
+                <Avatar
+                  className="h-10 w-10 rounded-full overflow-hidden"
+                  isOnline={getUserStatus(contact._id)?.isOnline}
+                >
                   {contact.image ? (
                     <AvatarImage
                       src={contact.image}

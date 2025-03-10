@@ -29,6 +29,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
     lastLogin: {
       type: Date,
       default: Date.now,
@@ -74,6 +82,23 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   } catch (error) {
     throw new Error("Error comparing passwords");
   }
+};
+
+userSchema.methods.updateOnlineStatus = async function (status) {
+  this.isOnline = status;
+  this.lastActive = new Date();
+  return this.save();
+};
+
+// Thêm phương thức để kiểm tra nếu người dùng còn trực tuyến
+userSchema.methods.isActivelyOnline = function (timeoutMinutes = 5) {
+  if (!this.isOnline) return false;
+
+  const now = new Date();
+  const lastActiveTime = new Date(this.lastActive);
+  const diffMinutes = (now - lastActiveTime) / (1000 * 60);
+
+  return diffMinutes <= timeoutMinutes;
 };
 
 const User = mongoose.model("User", userSchema);

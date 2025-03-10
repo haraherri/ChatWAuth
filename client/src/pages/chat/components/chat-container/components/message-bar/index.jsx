@@ -13,7 +13,7 @@ import { toast } from "sonner";
 const MessageBar = () => {
   const emojiRef = useRef();
   const fileInputRef = useRef();
-  const socket = useSocket();
+  const { socket } = useSocket();
   const { selectedChatData, selectedChatType, userInfo } = useAppStore();
   const [message, setMessage] = useState("");
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);

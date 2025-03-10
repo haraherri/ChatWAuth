@@ -34,19 +34,19 @@ export const SocketProvider = ({ children }) => {
           userInfo,
         } = useAppStore.getState();
 
-        // Xử lý tin nhắn DM
+        // handle contact message
         if (!message.room) {
-          // Nếu là tin nhắn DM
+          // if the message is sent by the current user, the recipient is the contact
           const contactId =
             message.sender._id === userInfo.id
               ? message.recipient._id
               : message.sender._id;
 
-          // Cập nhật tin nhắn cuối và sắp xếp lại danh sách
+          // update last message and sort contacts
           updateLastMessage(contactId, message, "contact");
           sortContactsByLastMessage();
 
-          // Thêm tin nhắn vào cuộc trò chuyện nếu đang mở
+          // add message to chat if it's open
           if (
             selectedChatType === "contact" &&
             selectedChatData?._id === contactId
@@ -54,15 +54,15 @@ export const SocketProvider = ({ children }) => {
             addMessage(message);
           }
         }
-        // Xử lý tin nhắn channel
+        // handle channel message
         else {
           const channelId = message.room;
 
-          // Cập nhật tin nhắn cuối và sắp xếp lại danh sách
+          // update last message and sort channels
           updateLastMessage(channelId, message, "channel");
           sortChannelsByLastMessage();
 
-          // Thêm tin nhắn vào cuộc trò chuyện nếu đang mở
+          // add message to chat if it's open
           if (
             selectedChatType === "channel" &&
             selectedChatData?._id === channelId
@@ -85,7 +85,7 @@ export const SocketProvider = ({ children }) => {
 
           const message = response.message;
 
-          // Xử lý tin nhắn DM
+          // handle contact message
           if (!message.room) {
             updateLastMessage(message.recipient._id, message, "contact");
             sortContactsByLastMessage();
@@ -97,7 +97,7 @@ export const SocketProvider = ({ children }) => {
               addMessage(message);
             }
           }
-          // Xử lý tin nhắn channel
+          // handle channel message
           else {
             updateLastMessage(message.room, message, "channel");
             sortChannelsByLastMessage();
@@ -198,6 +198,29 @@ export const SocketProvider = ({ children }) => {
         toast.error(error);
       };
 
+      // handle user status update
+      const handleUserStatusUpdate = (data) => {
+        const { updateUserStatus } = useAppStore.getState();
+        updateUserStatus(data.userId, data.isOnline, data.lastActive);
+      };
+
+      // handle user status
+      const handleUserStatus = (data) => {
+        const { updateUserStatus } = useAppStore.getState();
+        updateUserStatus(data.userId, data.isOnline, data.lastActive);
+      };
+
+      // handle user status error
+      const handleUserStatusError = (error) => {
+        toast.error(`Error getting user status: ${error}`);
+      };
+
+      // handle room online users
+      const handleRoomOnlineUsers = (data) => {
+        const { updateRoomOnlineUsers } = useAppStore.getState();
+        updateRoomOnlineUsers(data.roomId, data.onlineUsers);
+      };
+
       socket.current.on("connect", () => {
         console.log("Connected to socket server");
       });
@@ -219,6 +242,12 @@ export const SocketProvider = ({ children }) => {
       socket.current.on("userLeftRoom", handleUserLeftRoom);
       socket.current.on("roomError", handleRoomError);
 
+      // User status handlers
+      socket.current.on("userStatusUpdate", handleUserStatusUpdate);
+      socket.current.on("userStatus", handleUserStatus);
+      socket.current.on("userStatusError", handleUserStatusError);
+      socket.current.on("roomOnlineUsers", handleRoomOnlineUsers);
+
       return () => {
         socket.current.off("newMessage");
         socket.current.off("messageSent");
@@ -233,13 +262,35 @@ export const SocketProvider = ({ children }) => {
         socket.current.off("roomUpdated");
         socket.current.off("addedToRoom");
         socket.current.off("removedFromRoom");
+        socket.current.off("userStatusUpdate");
+        socket.current.off("userStatus");
+        socket.current.off("userStatusError");
+        socket.current.off("roomOnlineUsers");
         socket.current.disconnect();
       };
     }
   }, [userInfo]);
 
+  const getUserStatus = (userId) => {
+    if (socket.current) {
+      socket.current.emit("getUserStatus", userId);
+    }
+  };
+
+  const getRoomOnlineUsers = (roomId) => {
+    if (socket.current) {
+      socket.current.emit("getRoomOnlineUsers", roomId);
+    }
+  };
+
   return (
-    <SocketContext.Provider value={socket.current}>
+    <SocketContext.Provider
+      value={{
+        socket: socket.current,
+        getUserStatus,
+        getRoomOnlineUsers,
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );

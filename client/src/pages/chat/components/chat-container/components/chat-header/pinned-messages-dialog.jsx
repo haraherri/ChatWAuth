@@ -18,7 +18,7 @@ const PinnedMessagesDialog = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [isContentReady, setIsContentReady] = useState(false);
-  const socket = useSocket();
+  const { socket } = useSocket();
   const {
     selectedChatData,
     userInfo,
